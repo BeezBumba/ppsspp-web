@@ -4,7 +4,7 @@ Web shell and local server for the PPSSPP WebAssembly build.
 
 This repository contains:
 
-- `wasm-page/`: browser UI, service worker, manifest, and icons.
+- `wasm-page/`: Angular app, browser UI, service worker, manifest, and icons.
 - `server/`: HTTPS server with COOP/COEP headers and the browser ad hoc WebSocket relay.
 
 The emulator source and WebAssembly build outputs live in `deps/ppsspp-wasm`,
@@ -33,6 +33,13 @@ make wasm-submodules
 ```
 
 ## Local Run
+
+Install and build the Angular app:
+
+```sh
+make app-install
+make app-build
+```
 
 Build PPSSPP from the active `WASM_ROOT` first:
 
@@ -83,8 +90,9 @@ otherwise other machines will not be able to fetch it.
 make server-docker-up
 ```
 
-The compose file mounts `WASM_ROOT` read-only at `/wasm`. For the sibling local
-checkout:
+The Docker image builds the Angular web shell in a Node stage, then serves the
+compiled static bundle from the Python server. The compose file mounts
+`WASM_ROOT` read-only at `/wasm`. For the sibling local checkout:
 
 ```sh
 make server-docker-up-local
@@ -92,5 +100,22 @@ make server-docker-up-local
 
 ## GitHub Pages
 
-The Pages workflow builds `deps/ppsspp-wasm` with Emscripten, copies the web
-shell from `wasm-page/`, and publishes the complete app to GitHub Pages.
+Build the static Angular bundle with a relative base href, ready for GitHub
+Pages, from an existing `ppsspp-wasm` release build:
+
+```sh
+make wasm-release
+make app-build-pages
+```
+
+Or run the complete local pipeline in one shot:
+
+```sh
+make pages
+```
+
+The target writes the publishable app to `wasm-page/dist/ppsspp-web/`, adds
+`.nojekyll`, copies `$(WASM_ROOT)/build-wasm-release/` into
+`wasm-page/dist/ppsspp-web/build-wasm/`, and publishes
+`$(WASM_ROOT)/assets/` under `build-wasm/assets/` when present. That output
+directory is the exact static artifact uploaded by the GitHub Pages workflow.

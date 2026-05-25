@@ -1,9 +1,12 @@
-.PHONY: help wasm-dev wasm-dev-local wasm-release wasm-release-local serve serve-local \
+.PHONY: help app-install app-build app-build-pages pages wasm-dev wasm-dev-local wasm-release wasm-release-local serve serve-local \
 	server-docker-up server-docker-up-local server-docker-down server-docker-logs \
 	wasm-status wasm-root-check wasm-submodules wasm-submodule-branch \
 	wasm-submodule-update wasm-submodule-use-local wasm-submodule-use-origin \
 	wasm-pin-local
 
+APP_DIR := wasm-page
+APP_DIST := $(APP_DIR)/dist/ppsspp-web
+PAGES_WASM_BUILD ?= release
 WASM_SUBMODULE := deps/ppsspp-wasm
 LOCAL_WASM_ROOT ?= ../ppsspp-wasm
 WASM_ROOT ?= $(WASM_SUBMODULE)
@@ -12,9 +15,18 @@ BIND ?= 192.168.1.170
 PORT ?= 8081
 CMAKE ?= $(or $(wildcard /usr/bin/cmake),cmake)
 WASM_JOBS ?= -j
+ifeq ($(PAGES_WASM_BUILD),dev)
+PAGES_WASM_DIR := $(WASM_ROOT)/build-wasm
+else
+PAGES_WASM_DIR := $(WASM_ROOT)/build-wasm-release
+endif
 
 help:
 	@echo "PPSSPP web targets:"
+	@echo "  make app-install           Install Angular app dependencies"
+	@echo "  make app-build             Build the Angular app"
+	@echo "  make app-build-pages       Build a static Pages app from an existing ppsspp-wasm build"
+	@echo "  make pages                 Build ppsspp-wasm release, then build the static Pages app"
 	@echo "  make wasm-dev              Build the active WASM_ROOT ($(WASM_ROOT)) for dev"
 	@echo "  make wasm-release          Build the active WASM_ROOT ($(WASM_ROOT)) for release"
 	@echo "  make serve                 Serve the active WASM_ROOT ($(WASM_ROOT))"
@@ -28,6 +40,32 @@ help:
 	@echo "  WASM_ROOT=$(WASM_ROOT)"
 	@echo "  LOCAL_WASM_ROOT=$(LOCAL_WASM_ROOT)"
 	@echo "  WASM_BRANCH=$(WASM_BRANCH)"
+	@echo "  PAGES_WASM_BUILD=$(PAGES_WASM_BUILD)"
+
+app-install:
+	npm --prefix $(APP_DIR) install
+
+app-build:
+	npm --prefix $(APP_DIR) run build
+
+app-build-pages: wasm-root-check
+	@test -f "$(PAGES_WASM_DIR)/PPSSPPSDL.js" || (echo "Missing $(PAGES_WASM_DIR)/PPSSPPSDL.js. Run: make wasm-release" >&2; exit 1)
+	@test -f "$(PAGES_WASM_DIR)/PPSSPPSDL.wasm" || (echo "Missing $(PAGES_WASM_DIR)/PPSSPPSDL.wasm. Run: make wasm-release" >&2; exit 1)
+	@test -f "$(PAGES_WASM_DIR)/PPSSPPSDL.data" || (echo "Missing $(PAGES_WASM_DIR)/PPSSPPSDL.data. Run: make wasm-release" >&2; exit 1)
+	npm --prefix $(APP_DIR) run build:pages
+	rm -rf "$(APP_DIST)/build-wasm" "$(APP_DIST)/build-wasm-release" "$(APP_DIST)/assets"
+	mkdir -p "$(APP_DIST)/build-wasm"
+	cp -aL "$(PAGES_WASM_DIR)/." "$(APP_DIST)/build-wasm/"
+	@if [ -d "$(WASM_ROOT)/assets" ]; then mkdir -p "$(APP_DIST)/build-wasm/assets"; cp -aL "$(WASM_ROOT)/assets/." "$(APP_DIST)/build-wasm/assets/"; find "$(WASM_ROOT)/assets" -type f ! -path '*/.*' | sed 's#^$(WASM_ROOT)/assets/##' | LC_ALL=C sort > "$(APP_DIST)/assets-manifest.txt"; fi
+	@touch "$(APP_DIST)/.nojekyll"
+	@test -f "$(APP_DIST)/index.html"
+	@test -f "$(APP_DIST)/sw.js"
+	@test -f "$(APP_DIST)/build-wasm/PPSSPPSDL.js"
+	@test -f "$(APP_DIST)/build-wasm/PPSSPPSDL.wasm"
+	@test -f "$(APP_DIST)/build-wasm/PPSSPPSDL.data"
+	@echo "GitHub Pages static bundle ready in $(APP_DIST) using $(PAGES_WASM_DIR)"
+
+pages: wasm-release app-build-pages
 
 wasm-root-check:
 	@test -d "$(WASM_ROOT)" || (echo "Missing WASM_ROOT: $(WASM_ROOT)" >&2; exit 1)
