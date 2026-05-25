@@ -11,7 +11,8 @@ wasm-release: wasm-submodules
 	$(MAKE) -C $(WASM_ROOT) wasm-release CMAKE=$(CMAKE) WASM_JOBS="$(WASM_JOBS)"
 	rm -rf build-wasm-release assets
 	ln -s $(WASM_ROOT)/build-wasm-release build-wasm-release
-	ln -s $(WASM_ROOT)/assets assets
+	mkdir -p assets
+	cp -a $(WASM_ROOT)/assets/. assets/
 
 serve:
 	python3 server/serve.py --https --wasm-root $(WASM_ROOT) --bind $(BIND) --port $(PORT) --adhoc-ws
