@@ -3930,6 +3930,45 @@ gpuSelectEl.addEventListener("change", () => {
 window.addEventListener("error",             (e) => log("JS ERROR: " + (e.message || e.error || "unknown"), "err"));
 window.addEventListener("unhandledrejection",(e) => log("PROMISE ERROR: " + (e.reason?.stack || e.reason || "unknown"), "err"));
 
+const COI_RELOAD_KEY = "ppsspp-coi-reload-count";
+
+async function reloadForCrossOriginIsolation(reason) {
+  if (window.crossOriginIsolated) {
+    sessionStorage.removeItem(COI_RELOAD_KEY);
+    return true;
+  }
+
+  const attempts = Number(sessionStorage.getItem(COI_RELOAD_KEY) || "0");
+  if (attempts >= 3) {
+    log("Cross-origin isolation still unavailable after reload attempts. SharedArrayBuffer cannot be used on this page.", "err");
+    setStatus("SharedArrayBuffer unavailable. Reload the page or clear site data.", "err");
+    hideLoading();
+    setStartButtonMode("idle");
+    return false;
+  }
+
+  if (!("serviceWorker" in navigator)) {
+    log("Service workers are unavailable, cannot synthesize COOP/COEP headers for GitHub Pages.", "err");
+    setStatus("This browser cannot enable SharedArrayBuffer for GitHub Pages.", "err");
+    return false;
+  }
+
+  sessionStorage.setItem(COI_RELOAD_KEY, String(attempts + 1));
+  log("Cross-origin isolation required for WASM threads; reloading through service worker" + (reason ? " (" + reason + ")" : "") + ".", "warn");
+  setStatus("Preparing SharedArrayBuffer isolation\u2026", "run");
+  showLoading("Preparing secure runtime\u2026");
+
+  try {
+    await navigator.serviceWorker.register("sw.js", { scope: "./" });
+    await navigator.serviceWorker.ready;
+  } catch(e) {
+    log("SW registration before isolation reload failed: " + (e?.message || e), "warn");
+  }
+
+  location.reload();
+  return false;
+}
+
 /* ── Asset / game loading ───────────────────────────────────────── */
 function dirname(p) { const s = p.lastIndexOf("/"); return s === -1 ? "" : p.slice(0, s); }
 
@@ -4054,6 +4093,11 @@ let fpsFrames = 0, fpsLast = performance.now();
 /* ── Launch ─────────────────────────────────────────────────────── */
 async function start() {
   if (started) return;
+  if (!window.crossOriginIsolated || typeof SharedArrayBuffer === "undefined") {
+    await reloadForCrossOriginIsolation("launch");
+    return;
+  }
+  sessionStorage.removeItem(COI_RELOAD_KEY);
   started = true;
   document.body.classList.add("emulator-started");
   log("Launch button clicked.", "info");
@@ -4543,17 +4587,13 @@ refreshSavesTab();      // populate Saves tab from OPFS on load (no FS needed)
 
 /* ── PWA: Service Worker registration ──────────────────────────── */
 if ("serviceWorker" in navigator) {
-  const coiReloadKey = "ppsspp-coi-reload";
-  const reloadForCrossOriginIsolation = () => {
-    if (window.crossOriginIsolated || sessionStorage.getItem(coiReloadKey) === "1") return;
-    sessionStorage.setItem(coiReloadKey, "1");
-    location.reload();
-  };
-  navigator.serviceWorker.addEventListener("controllerchange", reloadForCrossOriginIsolation);
+  navigator.serviceWorker.addEventListener("controllerchange", () => reloadForCrossOriginIsolation("controllerchange"));
   navigator.serviceWorker.register("sw.js", { scope: "./" })
     .then(reg => {
       log("SW registered (scope: " + reg.scope + ")", "ok");
-      if (navigator.serviceWorker.controller) reloadForCrossOriginIsolation();
+      if (navigator.serviceWorker.controller && !window.crossOriginIsolated) {
+        reloadForCrossOriginIsolation("existing controller");
+      }
       reg.addEventListener("updatefound", () => {
         const sw = reg.installing;
         sw?.addEventListener("statechange", () => {
