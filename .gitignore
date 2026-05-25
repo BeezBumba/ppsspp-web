@@ -7,3 +7,7 @@ server/key.pem
 **/__pycache__/
 *.pyc
 .DS_Store
+node_modules/
+wasm-page/.angular/
+wasm-page/dist/
+node_modules
