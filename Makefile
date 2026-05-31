@@ -55,14 +55,21 @@ app-build-pages: wasm-root-check
 	npm --prefix $(APP_DIR) run build:pages
 	rm -rf "$(APP_DIST)/build-wasm" "$(APP_DIST)/build-wasm-release" "$(APP_DIST)/assets"
 	mkdir -p "$(APP_DIST)/build-wasm"
-	cp -aL "$(PAGES_WASM_DIR)/." "$(APP_DIST)/build-wasm/"
+	cp -aL "$(PAGES_WASM_DIR)/PPSSPPSDL.js" "$(APP_DIST)/build-wasm/"
+	cp -aL "$(PAGES_WASM_DIR)/PPSSPPSDL.wasm" "$(APP_DIST)/build-wasm/"
+	cp -aL "$(PAGES_WASM_DIR)/PPSSPPSDL.data" "$(APP_DIST)/build-wasm/"
 	@if [ -d "$(WASM_ROOT)/assets" ]; then mkdir -p "$(APP_DIST)/build-wasm/assets"; cp -aL "$(WASM_ROOT)/assets/." "$(APP_DIST)/build-wasm/assets/"; find "$(WASM_ROOT)/assets" -type f ! -path '*/.*' | sed 's#^$(WASM_ROOT)/assets/##' | LC_ALL=C sort > "$(APP_DIST)/assets-manifest.txt"; fi
 	@touch "$(APP_DIST)/.nojekyll"
 	@test -f "$(APP_DIST)/index.html"
+	@grep -q '<base href="./">' "$(APP_DIST)/index.html"
+	@test -f "$(APP_DIST)/manifest.webmanifest"
 	@test -f "$(APP_DIST)/sw.js"
+	@test -f "$(APP_DIST)/ppsspp-runtime.js"
 	@test -f "$(APP_DIST)/build-wasm/PPSSPPSDL.js"
 	@test -f "$(APP_DIST)/build-wasm/PPSSPPSDL.wasm"
 	@test -f "$(APP_DIST)/build-wasm/PPSSPPSDL.data"
+	@test ! -e "$(APP_DIST)/build-wasm/CMakeCache.txt"
+	@test ! -d "$(APP_DIST)/build-wasm/lib"
 	@echo "GitHub Pages static bundle ready in $(APP_DIST) using $(PAGES_WASM_DIR)"
 
 pages: wasm-release app-build-pages
