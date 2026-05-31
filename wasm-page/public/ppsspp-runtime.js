@@ -6,6 +6,8 @@ const MANIFEST         = "assets-manifest.txt";
 const USE_PRELOADED_ASSETS = true;
 const VIRTUAL_ASSETS   = "/emsdk/upstream/emscripten/cache/sysroot/share/ppsspp/assets";
 const VIRTUAL_GAME_DIR = "/games";
+const GAME_FILE_ACCEPT = ".iso,.cso,.chd,.pbp,.elf,.prx";
+const GAME_FILE_EXT_RE = /\.(iso|cso|chd|pbp|elf|prx)$/i;
 
 // Persistence: PPSSPP writes config+saves to $HOME/.config/ppsspp/ on Linux/Emscripten
 const PERSIST_ROOTS       = ["/home/web_user/.config/ppsspp", "/root/.config/ppsspp"];
@@ -241,6 +243,8 @@ const logEl           = document.getElementById("log");
 const logFilter       = document.getElementById("logFilter");
 const loadOverlay     = document.getElementById("loadOverlay");
 const loadLabel       = document.getElementById("loadLabel");
+document.querySelectorAll("#gameFile, #runtimeGameFile, #libraryImportFile")
+  .forEach(input => { input.accept = GAME_FILE_ACCEPT; });
 const progressBar     = document.getElementById("progressBar");
 const idleOverlay     = document.getElementById("idleOverlay");
 const idleSubtitle    = document.getElementById("idleSubtitle");
@@ -302,7 +306,7 @@ const audioDebug = {
 
 function updateIdleOverlay() {
   if (!idleOverlay || started) return;
-  let text = "Open a ROM or pick a game from the library to start PPSSPP in the browser.";
+  let text = "Open a PSP game file or pick one from the library to start PPSSPP in the browser.";
   if (selectedGame) text = "Ready to launch " + selectedGame.name + ".";
   else if (selectedStoredGame) text = "Ready to launch " + selectedStoredGame + " from your library.";
   if (idleSubtitle) idleSubtitle.textContent = text;
@@ -310,43 +314,22 @@ function updateIdleOverlay() {
 updateIdleOverlay();
 
 function setStartButtonMode(mode) {
-  if (mode === "pause") {
-    startBtn.disabled = false;
-    startBtn.title = "Pause / PPSSPP menu";
-    startBtn.innerHTML = `${svgIcon("menu")}<span class="btn-lbl"> Menu</span>`;
+  if (mode === "running") {
+    startBtn.disabled = true;
+    startBtn.style.display = "none";
+    startBtn.title = "PPSSPP is running";
+    startBtn.innerHTML = `${svgIcon("play")}<span class="btn-lbl"> Running</span>`;
   } else if (mode === "loading") {
     startBtn.disabled = true;
+    startBtn.style.display = "";
     startBtn.title = "Starting PPSSPP";
     startBtn.innerHTML = `${svgIcon("play")}<span class="btn-lbl"> Launch</span>`;
   } else {
     startBtn.disabled = false;
+    startBtn.style.display = "";
     startBtn.title = "Launch PPSSPP";
     startBtn.innerHTML = `${svgIcon("play")}<span class="btn-lbl"> Launch</span>`;
   }
-}
-
-function dispatchEscape(target, type) {
-  const ev = new KeyboardEvent(type, {
-    key: "Escape",
-    code: "Escape",
-    keyCode: 27,
-    which: 27,
-    bubbles: true,
-    cancelable: true,
-  });
-  target.dispatchEvent(ev);
-}
-
-function openPPSSPPPauseMenu() {
-  if (!started) return start();
-  if (!runtimeReady) return;
-  unlockAudio();
-  canvas.focus();
-  dispatchEscape(document, "keydown");
-  setTimeout(() => {
-    dispatchEscape(document, "keyup");
-  }, 35);
-  log("Sent Escape to PPSSPP pause menu.", "info");
 }
 
 /* ── Toast ──────────────────────────────────────────────────────── */
@@ -544,7 +527,7 @@ function base64ToBytes(data) {
 }
 
 function stripGameExtension(name) {
-  return name.replace(/\.(iso|cso|pbp|elf|prx)$/i, "");
+  return name.replace(GAME_FILE_EXT_RE, "");
 }
 
 function prettyGameName(name) {
@@ -767,12 +750,12 @@ async function updateStorageInfo() {
         // Group by category
         const cats = new Map();
         for (const { path, data, size } of allFiles) {
-          const cat = path.startsWith(VIRTUAL_GAME_DIR + "/") ? "ISO Library" : opfsFileCategory(path);
+          const cat = path.startsWith(VIRTUAL_GAME_DIR + "/") ? "Game Library" : opfsFileCategory(path);
           if (!cats.has(cat)) cats.set(cat, []);
           cats.get(cat).push({ path, size: data?.byteLength || size || 0 });
         }
         // Sort categories: Config first, then alphabetical
-        const catOrder = ["ISO Library", "Config", "System / Config", "Save States", "Save Data", "Screenshots", "Cheats", "Games (PSP)", "Other"];
+        const catOrder = ["Game Library", "Config", "System / Config", "Save States", "Save Data", "Screenshots", "Cheats", "Games (PSP)", "Other"];
         const sorted = [...cats.entries()].sort((a, b) => {
           const ai = catOrder.indexOf(a[0]); const bi = catOrder.indexOf(b[0]);
           return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
@@ -815,7 +798,7 @@ async function downloadStoredFile(path) {
 async function deleteStoredFile(path) {
   if (path.startsWith(VIRTUAL_GAME_DIR + "/")) {
     const name = path.slice((VIRTUAL_GAME_DIR + "/").length);
-    if (!confirm("Delete ISO from OPFS:\n" + name + "?")) return;
+    if (!confirm("Delete game file from OPFS:\n" + name + "?")) return;
     try {
       await opfsDeleteGame(name);
       if (window.FS) { try { window.FS.unlink(path); } catch(e) {} }
@@ -823,7 +806,7 @@ async function deleteStoredFile(path) {
       await refreshLibrary();
       updateStorageInfo();
     } catch(e) {
-      log("Delete ISO failed: " + e.message, "err");
+      log("Delete game file failed: " + e.message, "err");
       showToast("❌ Delete failed: " + e.message);
     }
   } else {
@@ -851,11 +834,11 @@ async function playOrMountStoredGame(name) {
     showToast("Mounting " + name + "…");
     FS.mkdirTree(VIRTUAL_GAME_DIR);
     FS.writeFile(path, await opfsReadGame(name));
-    log("Mounted stored ISO from OPFS: " + path, "ok");
+    log("Mounted stored game file from OPFS: " + path, "ok");
     showToast("✓ " + name + " mounted");
     refreshLibrary();
   } catch(e) {
-    log("Stored ISO mount failed: " + e.message, "err");
+    log("Stored game mount failed: " + e.message, "err");
     showToast("❌ " + e.message);
   }
 }
@@ -956,7 +939,7 @@ async function refreshLibrary() {
     if (count) count.textContent = games.length + " game" + (games.length === 1 ? "" : "s");
 
     if (!games.length) {
-      empty.innerHTML = "No games in OPFS yet.<br>Add an ISO or use Launch ROM once.";
+      empty.innerHTML = "No games in OPFS yet.<br>Add a game file or launch one once.";
       return;
     }
 
@@ -984,7 +967,7 @@ async function refreshLibrary() {
             <div class="game-card-actions">
               <button data-action="play" data-game="${esc(game.path)}"${primaryDisabled}>${primary}</button>
               <button class="icon-only" title="Info" data-action="info" data-game="${esc(game.path)}">${svgIcon("info")}</button>
-              <button class="icon-only drive-sync-btn" title="Upload ISO to Drive" data-action="drive-upload" data-game="${esc(game.path)}">${svgIcon("cloud-upload")}</button>
+              <button class="icon-only drive-sync-btn" title="Upload game file to Drive" data-action="drive-upload" data-game="${esc(game.path)}">${svgIcon("cloud-upload")}</button>
               <button class="icon-only danger" title="Delete" data-action="delete" data-game="${esc(game.path)}">${svgIcon("trash")}</button>
             </div>
           </div>
@@ -1481,19 +1464,19 @@ async function uploadSingleSaveStateToDrive(paths, gameName) {
 async function uploadSingleGameToDrive(gameName) {
   if (!googleAccessToken) { showToast("⚠ Connect Google Drive first"); return; }
   try {
-    setDriveActivity("Uploading ISO " + gameName + "…", "run");
+    setDriveActivity("Uploading game " + gameName + "…", "run");
     await ensureDriveFolders(true);
     showLoading("Uploading " + gameName + " to Drive…");
     const bytes = await opfsReadGame(gameName);
-    await uploadBlobToDrive(gameName, googleDriveGamesId, bytes, "application/octet-stream", "Uploading ISO");
-    log("Google Drive: uploaded ISO " + gameName + " (" + formatBytes(bytes.byteLength) + ").", "ok");
+    await uploadBlobToDrive(gameName, googleDriveGamesId, bytes, "application/octet-stream", "Uploading game");
+    log("Google Drive: uploaded game " + gameName + " (" + formatBytes(bytes.byteLength) + ").", "ok");
     setDriveActivity("Uploaded " + gameName + " to Drive", "ok");
     showToast("✓ " + gameName + " uploaded to Drive");
     await refreshDriveList();
   } catch(e) {
     const message = googleAuthErrorMessage(e);
-    log("Drive ISO upload failed: " + message, "err");
-    setDriveActivity("ISO upload failed: " + message, "bad");
+    log("Drive game upload failed: " + message, "err");
+    setDriveActivity("Game upload failed: " + message, "bad");
     showToast("❌ " + message, 5000);
   } finally { hideLoading(); }
 }
@@ -2454,7 +2437,7 @@ function setDriveInfo(auth, cls) {
   if (driveRemoteEl) {
     const s = googleDriveRemoteCache.saves.length;
     const g = googleDriveRemoteCache.games.length;
-    driveRemoteEl.textContent = googleAccessToken ? (s + " saves · " + g + " ISOs") : "\u2014";
+    driveRemoteEl.textContent = googleAccessToken ? (s + " saves · " + g + " games") : "\u2014";
   }
 }
 
@@ -2693,7 +2676,7 @@ async function refreshDriveList() {
   googleDriveRemoteCache.games.sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
   renderDriveRemoteList();
   setDriveInfo("Connected", "good");
-  setDriveActivity("Drive ready: " + googleDriveRemoteCache.saves.length + " save bundle(s), " + googleDriveRemoteCache.games.length + " ISO(s)", "ok");
+  setDriveActivity("Drive ready: " + googleDriveRemoteCache.saves.length + " save bundle(s), " + googleDriveRemoteCache.games.length + " game file(s)", "ok");
   updateDriveAutoSyncUI();
 }
 
@@ -2702,11 +2685,11 @@ function renderDriveRemoteList() {
   const saves = googleDriveRemoteCache.saves || [];
   const games = googleDriveRemoteCache.games || [];
   if (!googleAccessToken) {
-    driveRemoteList.innerHTML = `<span class="drive-empty">Connect Google Drive to list remote saves and ISOs.</span>`;
+    driveRemoteList.innerHTML = `<span class="drive-empty">Connect Google Drive to list remote saves and games.</span>`;
     return;
   }
   if (!saves.length && !games.length) {
-    driveRemoteList.innerHTML = `<span class="drive-empty">No Drive files yet. Upload saves or your ISO library.</span>`;
+    driveRemoteList.innerHTML = `<span class="drive-empty">No Drive files yet. Upload saves or your game library.</span>`;
     return;
   }
   let html = "";
@@ -2721,7 +2704,7 @@ function renderDriveRemoteList() {
     }
   }
   if (games.length) {
-    html += `<div class="drive-section-label"><span>ISOs</span><span>${games.length}</span></div>`;
+    html += `<div class="drive-section-label"><span>Games</span><span>${games.length}</span></div>`;
     for (const file of games) {
       html += `<div class="drive-file-row">
         <div class="drive-file-name" title="${esc(file.name)}">${esc(file.name)}</div>
@@ -2817,30 +2800,30 @@ async function restoreDriveSave(file) {
 
 async function uploadGamesToDrive() {
   try {
-    setDriveActivity("Scanning local ISO library…", "run");
+    setDriveActivity("Scanning local game library…", "run");
     await ensureDriveFolders(true);
     const games = await opfsWalk(OPFS_GAMES_DIR, "", false);
     if (!games.length) {
-      setDriveActivity("No local ISOs in OPFS to upload", "warn");
-      showToast("No local ISOs in OPFS to upload");
+      setDriveActivity("No local games in OPFS to upload", "warn");
+      showToast("No local games in OPFS to upload");
       return;
     }
     let done = 0;
     for (const game of games) {
-      setDriveActivity("Uploading ISO " + (done + 1) + "/" + games.length + ": " + game.path, "run");
+      setDriveActivity("Uploading game " + (done + 1) + "/" + games.length + ": " + game.path, "run");
       const bytes = await opfsReadGame(game.path);
       await uploadBlobToDrive(game.path, googleDriveGamesId, bytes, "application/octet-stream",
-        "Uploading ISO " + (done + 1) + "/" + games.length);
+        "Uploading game " + (done + 1) + "/" + games.length);
       done++;
-      log("Google Drive: uploaded ISO " + game.path + " (" + formatBytes(bytes.byteLength) + ").", "ok");
+      log("Google Drive: uploaded game " + game.path + " (" + formatBytes(bytes.byteLength) + ").", "ok");
     }
-    setDriveActivity("Uploaded " + done + " ISO" + (done === 1 ? "" : "s") + " to Drive", "ok");
-    showToast("✓ Uploaded " + done + " ISO" + (done === 1 ? "" : "s") + " to Drive");
+    setDriveActivity("Uploaded " + done + " game" + (done === 1 ? "" : "s") + " to Drive", "ok");
+    showToast("✓ Uploaded " + done + " game" + (done === 1 ? "" : "s") + " to Drive");
     await refreshDriveList();
   } catch(e) {
     const message = googleAuthErrorMessage(e);
-    log("Google Drive ISO upload failed: " + message, "err");
-    setDriveActivity("ISO upload failed: " + message, "bad");
+    log("Google Drive game upload failed: " + message, "err");
+    setDriveActivity("Game upload failed: " + message, "bad");
     showToast("❌ " + message, 5000);
   } finally {
     hideLoading();
@@ -2849,13 +2832,13 @@ async function uploadGamesToDrive() {
 
 async function downloadDriveGame(file) {
   try {
-    setDriveActivity("Preparing ISO download…", "run");
+    setDriveActivity("Preparing game download…", "run");
     await ensureDriveFolders(true);
     showLoading("Downloading " + file.name + " from Drive…");
     setDriveActivity("Downloading " + file.name + "…", "run");
     const bytes = await driveDownloadBytes(file, file.name);
     const storedName = await storeGameBytes(file.name, bytes);
-    log("Google Drive: downloaded ISO " + storedName + " (" + formatBytes(bytes.byteLength) + ").", "ok");
+    log("Google Drive: downloaded game " + storedName + " (" + formatBytes(bytes.byteLength) + ").", "ok");
     setDriveActivity("Downloaded " + storedName + " to OPFS", "ok");
     setStatus("Downloaded " + storedName + " to OPFS", "ok");
     showToast("✓ Downloaded " + storedName);
@@ -2863,8 +2846,8 @@ async function downloadDriveGame(file) {
     updateStorageInfo();
   } catch(e) {
     const message = googleAuthErrorMessage(e);
-    log("Google Drive ISO download failed: " + message, "err");
-    setDriveActivity("ISO download failed: " + message, "bad");
+    log("Google Drive game download failed: " + message, "err");
+    setDriveActivity("Game download failed: " + message, "bad");
     showToast("❌ " + message, 5000);
   } finally {
     hideLoading();
@@ -2873,46 +2856,46 @@ async function downloadDriveGame(file) {
 
 async function downloadAllDriveGames() {
   try {
-    setDriveActivity("Preparing remote ISO downloads…", "run");
+    setDriveActivity("Preparing remote game downloads…", "run");
     await ensureDriveFolders(true);
     if (!googleDriveRemoteCache.games.length) await refreshDriveList();
     const games = googleDriveRemoteCache.games;
     if (!games.length) {
-      setDriveActivity("No remote ISOs found", "warn");
-      showToast("No remote ISOs found");
+      setDriveActivity("No remote games found", "warn");
+      showToast("No remote games found");
       return;
     }
     for (const game of games) await downloadDriveGame(game);
-    setDriveActivity("Downloaded " + games.length + " remote ISO" + (games.length === 1 ? "" : "s"), "ok");
-    showToast("✓ Downloaded " + games.length + " remote ISO" + (games.length === 1 ? "" : "s"));
+    setDriveActivity("Downloaded " + games.length + " remote game" + (games.length === 1 ? "" : "s"), "ok");
+    showToast("✓ Downloaded " + games.length + " remote game" + (games.length === 1 ? "" : "s"));
   } catch(e) {
     const message = googleAuthErrorMessage(e);
-    log("Google Drive bulk ISO download failed: " + message, "err");
-    setDriveActivity("Bulk ISO download failed: " + message, "bad");
+    log("Google Drive bulk game download failed: " + message, "err");
+    setDriveActivity("Bulk game download failed: " + message, "bad");
     showToast("❌ " + message, 5000);
   } finally {
     hideLoading();
   }
 }
 
-/* ── Runtime ISO loading (while PPSSPP is running) ──────────────── */
-async function loadISOAtRuntime(file) {
+/* ── Runtime game loading (while PPSSPP is running) ─────────────── */
+async function loadGameAtRuntime(file) {
   const FS = window.FS;
   if (!FS) { showToast("⚠ Start PPSSPP first"); return; }
   const safe = file.name.replace(/[^a-zA-Z0-9._\-]/g, "_");
   const path = VIRTUAL_GAME_DIR + "/" + safe;
-  log("Loading ISO at runtime: " + file.name + " → " + path, "info");
+  log("Loading game at runtime: " + file.name + " → " + path, "info");
   showToast("Loading " + file.name + "…");
   try {
     const bytes = new Uint8Array(await file.arrayBuffer());
     try { FS.mkdirTree(VIRTUAL_GAME_DIR); } catch(e) {}
     FS.writeFile(path, bytes);
     await opfsPutGame(file.name, bytes);
-    log("ISO ready at " + path + " and saved to OPFS. Open it from PPSSPP\u2019s game browser (Home \u2192 Games).", "ok");
+    log("Game file ready at " + path + " and saved to OPFS. Open it from PPSSPP\u2019s game browser (Home \u2192 Games).", "ok");
     showToast("✓ " + file.name + " loaded → open from PPSSPP game browser", 5000);
     refreshLibrary();
     updateStorageInfo();
-  } catch(e) { log("Runtime ISO load failed: " + e.message, "err"); showToast("❌ " + e.message); }
+  } catch(e) { log("Runtime game load failed: " + e.message, "err"); showToast("❌ " + e.message); }
 }
 
 /* ── AudioWorklet player ────────────────────────────────────────── */
@@ -4016,7 +3999,7 @@ async function preloadAssets(FS) {
 async function preloadStoredGames(FS) {
   const games = await opfsWalk(OPFS_GAMES_DIR);
   if (!games.length) {
-    log("OPFS games: no stored ISO files.", "dim");
+    log("OPFS games: no stored game files.", "dim");
     return 0;
   }
 
@@ -4025,8 +4008,8 @@ async function preloadStoredGames(FS) {
   for (const { path, data, size } of games) {
     const target = VIRTUAL_GAME_DIR + "/" + path;
     try {
-      setStatus("Restoring ISO " + (ok + 1) + "/" + games.length + ": " + path, "run");
-      showLoading("Restoring ISO: " + path);
+      setStatus("Restoring game " + (ok + 1) + "/" + games.length + ": " + path, "run");
+      showLoading("Restoring game: " + path);
       FS.writeFile(target, data);
       ok++;
       log("OPFS game mounted: " + target + " (" + formatBytes(size || data?.byteLength || 0) + ")", "ok");
@@ -4044,15 +4027,15 @@ async function preloadGame(FS) {
   const sourceName = selectedGame ? selectedGame.name : selectedStoredGame;
   const safe = sourceName.replace(/[^a-zA-Z0-9._-]/g, "_");
   const path = VIRTUAL_GAME_DIR + "/" + safe;
-  setStatus("Loading ROM into memory: " + sourceName, "run");
-  showLoading("Loading ROM: " + sourceName);
+  setStatus("Loading game into memory: " + sourceName, "run");
+  showLoading("Loading game: " + sourceName);
   const bytes = selectedGame
     ? new Uint8Array(await selectedGame.arrayBuffer())
     : await opfsReadGame(selectedStoredGame);
   FS.writeFile(path, bytes);
   try { if (selectedGame) await opfsPutGame(selectedGame.name, bytes); }
-  catch(e) { log("Could not persist ROM in OPFS: " + e.message, "warn"); }
-  log("ROM mounted in MEMFS" + (selectedGame ? " and saved to OPFS" : " from OPFS") + ": " + path, "ok");
+  catch(e) { log("Could not persist game in OPFS: " + e.message, "warn"); }
+  log("Game mounted in MEMFS" + (selectedGame ? " and saved to OPFS" : " from OPFS") + ": " + path, "ok");
   return path;
 }
 
@@ -4186,9 +4169,9 @@ async function start() {
       runtimeReady = true;
       setStatus(gameArg ? "Game running" : "Library ready", "ok");
       hideLoading();
-      setStartButtonMode("pause");
-      // Show runtime ISO loader button
-      document.getElementById("runtimeIsoLabel").style.display = "";
+      setStartButtonMode("running");
+      // Show runtime game loader button
+      document.getElementById("runtimeGameLabel").style.display = "";
       // Start auto-persist loop (every 30s)
       startAutoPersist();
       updateStorageInfo();
@@ -4307,18 +4290,17 @@ function installTouchMouseShim() {
 fileInput.addEventListener("change", () => {
   selectedGame = fileInput.files[0] || null;
   selectedStoredGame = null;
-  fileLabel.title = selectedGame ? selectedGame.name : "Launch ROM";
+  fileLabel.title = selectedGame ? selectedGame.name : "Open game";
   // Update the visible text node inside the label
   const textNode = fileLabel.firstChild;
   if (textNode && textNode.nodeType === 3)
-    textNode.textContent = (selectedGame ? "\uD83D\uDCC2 " + selectedGame.name : "\uD83D\uDCC2 Open ROM") + " ";
+    textNode.textContent = (selectedGame ? "\uD83D\uDCC2 " + selectedGame.name : "\uD83D\uDCC2 Open Game") + " ";
   updateIdleOverlay();
-  setStatus(selectedGame ? "Selected: " + selectedGame.name : "Ready. Open a ROM or use Library.");
+  setStatus(selectedGame ? "Selected: " + selectedGame.name : "Ready. Open a game file or use Library.");
 });
 
 startBtn.addEventListener("click", () => {
-  if (started) openPPSSPPPauseMenu();
-  else start();
+  start();
 });
 idleStartBtn.addEventListener("click", start);
 
@@ -4351,11 +4333,11 @@ document.getElementById("gameInfoModal").addEventListener("click", e => {
   if (e.target.id === "gameInfoModal") closeGameInfo();
 });
 
-// ── Runtime ISO loading ──────────────────────────────────────────
-document.getElementById("runtimeIsoFile").addEventListener("change", e => {
+// ── Runtime game loading ─────────────────────────────────────────
+document.getElementById("runtimeGameFile").addEventListener("change", e => {
   const f = e.target.files[0]; if (!f) return;
   e.target.value = "";
-  loadISOAtRuntime(f);
+  loadGameAtRuntime(f);
 });
 
 // ── Saves tab buttons ─────────────────────────────────────────────
@@ -4390,7 +4372,7 @@ document.getElementById("importSaveSlotFile").addEventListener("change", e => {
 });
 document.getElementById("deleteAllSavesBtn").addEventListener("click", async () => {
   if (!confirm("Delete ALL save data and save states?\nThis cannot be undone.")) return;
-  // Delete only save-related OPFS entries (not config files or ISOs)
+  // Delete only save-related OPFS entries (not config files or games)
   const all = await opfsWalk();
   for (const { path } of all) {
     const isSave = SAVE_SUBDIRS.some(sub => path.includes("/" + sub.dir + "/"));
@@ -4519,7 +4501,7 @@ driveRemoteList?.addEventListener("click", e => {
 });
 
 document.getElementById("clearStorageBtn").addEventListener("click", async () => {
-  if (!confirm("Delete ALL saved data and stored ISOs from OPFS? This cannot be undone.")) return;
+  if (!confirm("Delete ALL saved data and stored games from OPFS? This cannot be undone.")) return;
   await opfsClearAll();
   _lastPersistTime = 0;
   refreshLibrary();

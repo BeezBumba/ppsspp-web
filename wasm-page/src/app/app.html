@@ -12,13 +12,13 @@
 
     <div class="hbar-group" id="launchGroup">
       <label class="btn" id="fileLabel">
-        <i data-lucide="folder-open"></i><span class="btn-lbl"> Open ROM</span>
-        <input id="gameFile" type="file" accept=".iso,.cso,.pbp,.elf,.prx">
+        <i data-lucide="folder-open"></i><span class="btn-lbl"> Open Game</span>
+        <input id="gameFile" type="file" accept=".iso,.cso,.chd,.pbp,.elf,.prx">
       </label>
       <button id="startBtn" class="primary"><i data-lucide="play"></i><span class="btn-lbl"> Start PPSSPP</span></button>
-      <label class="btn" id="runtimeIsoLabel" style="display:none" title="Load ISO while running — then open from PPSSPP game browser">
-        <i data-lucide="upload"></i><span class="btn-lbl"> Load ISO</span>
-        <input id="runtimeIsoFile" type="file" accept=".iso,.cso,.pbp,.elf,.prx">
+      <label class="btn" id="runtimeGameLabel" style="display:none" title="Load a game file while running — then open it from PPSSPP game browser">
+        <i data-lucide="upload"></i><span class="btn-lbl"> Load Game</span>
+        <input id="runtimeGameFile" type="file" accept=".iso,.cso,.chd,.pbp,.elf,.prx">
       </label>
     </div>
 
@@ -61,9 +61,9 @@
           <div class="idle-copy">
             <div class="idle-kicker">Ready to play</div>
             <h1 class="idle-title">Your PSP is waiting.</h1>
-            <p class="idle-subtitle" id="idleSubtitle">Open a ROM or pick a game from the library to start PPSSPP in the browser.</p>
+            <p class="idle-subtitle" id="idleSubtitle">Open a PSP game file or pick one from the library to start PPSSPP in the browser.</p>
             <div class="idle-actions">
-              <label class="btn" for="gameFile"><i data-lucide="folder-open"></i><span> Open ROM</span></label>
+              <label class="btn" for="gameFile"><i data-lucide="folder-open"></i><span> Open Game</span></label>
               <button id="idleStartBtn" class="primary" type="button"><i data-lucide="play"></i><span> Start PPSSPP</span></button>
             </div>
           </div>
@@ -95,7 +95,7 @@
     <aside>
       <div class="status-bar">
         <div class="status-dot" id="statusDot"></div>
-        <span id="statusText">Ready. Open a ROM or use Library.</span>
+        <span id="statusText">Ready. Open a game file or use Library.</span>
       </div>
 
       <div class="panel-tab-select-wrap">
@@ -127,14 +127,14 @@
           <div class="library-toolbar">
             <button id="refreshLibraryBtn"><i data-lucide="refresh-cw"></i> Refresh</button>
             <label class="btn" id="libraryImportLabel">
-              <i data-lucide="folder-plus"></i> Add ISO
-              <input id="libraryImportFile" type="file" accept=".iso,.cso,.pbp,.elf,.prx">
+              <i data-lucide="folder-plus"></i> Add Game
+              <input id="libraryImportFile" type="file" accept=".iso,.cso,.chd,.pbp,.elf,.prx">
             </label>
-            <input id="libraryUrlInput" type="url" placeholder="https://.../game.iso" autocomplete="off" spellcheck="false">
+            <input id="libraryUrlInput" type="url" placeholder="https://.../game.iso|cso|chd" autocomplete="off" spellcheck="false">
             <button id="libraryDownloadUrlBtn"><i data-lucide="download"></i> Download</button>
             <span class="library-count" id="libraryCount">0 games</span>
           </div>
-          <div id="libraryEmpty">No games in OPFS yet.<br>Add an ISO or use Launch ROM once.</div>
+          <div id="libraryEmpty">No games in OPFS yet.<br>Add a game file or launch one once.</div>
           <div id="libraryGrid" class="library-grid" style="display:none"></div>
         </div>
       </div>
@@ -203,8 +203,8 @@
             <button id="driveRefreshBtn"><i data-lucide="refresh-cw"></i> Refresh Drive</button>
             <button id="driveUploadSavesBtn"><i data-lucide="upload"></i> Upload Saves</button>
             <button id="driveRestoreSavesBtn"><i data-lucide="download"></i> Restore Latest Saves</button>
-            <button id="driveUploadGamesBtn"><i data-lucide="upload"></i> Upload ISO Library</button>
-            <button id="driveDownloadGamesBtn"><i data-lucide="download"></i> Download Remote ISOs</button>
+            <button id="driveUploadGamesBtn"><i data-lucide="upload"></i> Upload Game Library</button>
+            <button id="driveDownloadGamesBtn"><i data-lucide="download"></i> Download Remote Games</button>
           </div>
           <div class="drive-autosync-row">
             <label class="drive-autosync-label">
@@ -224,7 +224,7 @@
             Static GitHub Pages flow: use a Google OAuth Web client ID, add this Pages origin and redirect URI in Google Cloud, and keep client secrets out of the app.
           </div>
           <div id="driveActivity" class="drive-activity">Idle</div>
-          <div id="driveRemoteList"><span class="drive-empty">Connect Google Drive to list remote saves and ISOs.</span></div>
+          <div id="driveRemoteList"><span class="drive-empty">Connect Google Drive to list remote saves and games.</span></div>
         </div>
       </div>
 
