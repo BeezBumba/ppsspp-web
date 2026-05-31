@@ -230,55 +230,69 @@ function triggerDownload(blob, fileName) {
   setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
-const canvas          = document.getElementById("canvas");
-const fileInput       = document.getElementById("gameFile");
-const fileLabel       = document.getElementById("fileLabel");
-const startBtn        = document.getElementById("startBtn");
-const fullscreenBtn   = document.getElementById("fullscreenBtn");
-const statusEl        = document.getElementById("statusText");
-const statusDot       = document.getElementById("statusDot");
-const stageDotEl      = document.getElementById("stageDot");
-const stageMiniTextEl = document.getElementById("stageMiniText");
-const logEl           = document.getElementById("log");
-const logFilter       = document.getElementById("logFilter");
-const loadOverlay     = document.getElementById("loadOverlay");
-const loadLabel       = document.getElementById("loadLabel");
-document.querySelectorAll("#gameFile, #runtimeGameFile, #libraryImportFile")
+const byId = id => document.getElementById(id);
+function on(target, type, handler, options) {
+  const el = typeof target === "string" ? byId(target) : target;
+  if (!el) {
+    console.warn("PPSSPP Web: missing DOM element for listener", target);
+    return null;
+  }
+  el.addEventListener(type, handler, options);
+  return el;
+}
+
+const canvas          = byId("canvas");
+const fileInput       = byId("gameFile");
+const fileLabel       = byId("fileLabel");
+const runtimeGameLabel = byId("runtimeIsoLabel") || byId("runtimeGameLabel");
+const runtimeGameInput = byId("runtimeIsoFile") || byId("runtimeGameFile");
+const startBtn        = byId("startBtn");
+const fullscreenBtn   = byId("fullscreenBtn");
+const statusEl        = byId("statusText");
+const statusDot       = byId("statusDot");
+const stageDotEl      = byId("stageDot");
+const stageMiniTextEl = byId("stageMiniText");
+const logEl           = byId("log");
+const logFilter       = byId("logFilter");
+const loadOverlay     = byId("loadOverlay");
+const loadLabel       = byId("loadLabel");
+[fileInput, runtimeGameInput, byId("libraryImportFile")]
+  .filter(Boolean)
   .forEach(input => { input.accept = GAME_FILE_ACCEPT; });
-const progressBar     = document.getElementById("progressBar");
-const idleOverlay     = document.getElementById("idleOverlay");
-const idleSubtitle    = document.getElementById("idleSubtitle");
-const idleStartBtn    = document.getElementById("idleStartBtn");
-const fpsBadge        = document.getElementById("fpsBadge");
-const gpuBadge        = document.getElementById("gpuBadge");
-const gamepadBadge    = document.getElementById("gamepadBadge");
-const gamepadSelect   = document.getElementById("gamepadSelect");
-const gpuSelectEl     = document.getElementById("gpuSelect");
-const panelToggleBtn  = document.getElementById("panelToggleBtn");
-const panelTabSelect  = document.getElementById("panelTabSelect");
-const googleClientIdInput = document.getElementById("googleClientIdInput");
-const driveAuthEl     = document.getElementById("iDriveAuth");
-const driveFolderEl   = document.getElementById("iDriveFolder");
-const driveRemoteEl   = document.getElementById("iDriveRemote");
-const driveActivityEl = document.getElementById("driveActivity");
-const driveRemoteList = document.getElementById("driveRemoteList");
-const driveBadgeEl    = document.getElementById("driveBadge");
-const driveBadgeText  = document.getElementById("driveBadgeText");
-const networkEnableToggle = document.getElementById("networkEnableToggle");
-const networkServerInput  = document.getElementById("networkServerInput");
-const networkNickInput    = document.getElementById("networkNickInput");
-const networkMacInput     = document.getElementById("networkMacInput");
-const networkUseThisHostBtn = document.getElementById("networkUseThisHostBtn");
-const networkTestBtn      = document.getElementById("networkTestBtn");
-const networkSaveBtn      = document.getElementById("networkSaveBtn");
-const networkActivityEl   = document.getElementById("networkActivity");
-const netServerEl         = document.getElementById("iNetServer");
-const netPortEl           = document.getElementById("iNetPort");
+const progressBar     = byId("progressBar");
+const idleOverlay     = byId("idleOverlay");
+const idleSubtitle    = byId("idleSubtitle");
+const idleStartBtn    = byId("idleStartBtn");
+const fpsBadge        = byId("fpsBadge");
+const gpuBadge        = byId("gpuBadge");
+const gamepadBadge    = byId("gamepadBadge");
+const gamepadSelect   = byId("gamepadSelect");
+const gpuSelectEl     = byId("gpuSelect");
+const panelToggleBtn  = byId("panelToggleBtn");
+const panelTabSelect  = byId("panelTabSelect");
+const googleClientIdInput = byId("googleClientIdInput");
+const driveAuthEl     = byId("iDriveAuth");
+const driveFolderEl   = byId("iDriveFolder");
+const driveRemoteEl   = byId("iDriveRemote");
+const driveActivityEl = byId("driveActivity");
+const driveRemoteList = byId("driveRemoteList");
+const driveBadgeEl    = byId("driveBadge");
+const driveBadgeText  = byId("driveBadgeText");
+const networkEnableToggle = byId("networkEnableToggle");
+const networkServerInput  = byId("networkServerInput");
+const networkNickInput    = byId("networkNickInput");
+const networkMacInput     = byId("networkMacInput");
+const networkUseThisHostBtn = byId("networkUseThisHostBtn");
+const networkTestBtn      = byId("networkTestBtn");
+const networkSaveBtn      = byId("networkSaveBtn");
+const networkActivityEl   = byId("networkActivity");
+const netServerEl         = byId("iNetServer");
+const netPortEl           = byId("iNetPort");
 
 // Panel toggle (hidden by default; restore from localStorage)
 const PANEL_KEY = "ppsspp_panel_open";
 if (localStorage.getItem(PANEL_KEY) === "1") document.body.classList.add("panel-open");
-panelToggleBtn.addEventListener("click", () => {
+on(panelToggleBtn, "click", () => {
   const open = document.body.classList.toggle("panel-open");
   localStorage.setItem(PANEL_KEY, open ? "1" : "0");
 });
@@ -314,6 +328,7 @@ function updateIdleOverlay() {
 updateIdleOverlay();
 
 function setStartButtonMode(mode) {
+  if (!startBtn) return;
   if (mode === "running") {
     startBtn.disabled = true;
     startBtn.style.display = "none";
@@ -333,8 +348,12 @@ function setStartButtonMode(mode) {
 }
 
 /* ── Toast ──────────────────────────────────────────────────────── */
-const toastEl = document.getElementById("toast");
+const toastEl = byId("toast");
 function showToast(msg, ms = 3200) {
+  if (!toastEl) {
+    console.log("Toast:", msg);
+    return;
+  }
   toastEl.textContent = msg;
   toastEl.classList.add("visible");
   clearTimeout(toastEl._t);
@@ -818,9 +837,9 @@ async function playOrMountStoredGame(name) {
   if (!started || !window.FS) {
     selectedStoredGame = name;
     selectedGame = null;
-    fileLabel.title = name;
+    if (fileLabel) fileLabel.title = name;
     updateIdleOverlay();
-    const textNode = fileLabel.firstChild;
+    const textNode = fileLabel?.firstChild;
     if (textNode && textNode.nodeType === 3) textNode.textContent = "\uD83D\uDCC2 " + name + " ";
     setStatus("Starting " + name, "run");
     showToast("Starting " + name + "…");
@@ -852,11 +871,20 @@ async function showGameInfo(name) {
     const cover = await readGameCoverURL(name, meta.coverType);
     if (cover) _libraryCoverURLs.push(cover);
 
-    document.getElementById("gameInfoTitle").textContent = title;
-    document.getElementById("gameInfoCover").innerHTML = cover
+    const titleEl = byId("gameInfoTitle");
+    const coverEl = byId("gameInfoCover");
+    const rowsEl = byId("gameInfoRows");
+    const modalEl = byId("gameInfoModal");
+    if (!titleEl || !coverEl || !rowsEl || !modalEl) {
+      showToast("Game details panel is not available in this page version.");
+      return;
+    }
+
+    titleEl.textContent = title;
+    coverEl.innerHTML = cover
       ? `<img src="${cover}" alt="${esc(title)} cover">`
       : `<div class="game-cover" style="height:100%;background:${gameAccent(name)}"><div class="game-cover-fallback">${esc(title.split(/\s+/).slice(0, 4).join(" "))}</div></div>`;
-    document.getElementById("gameInfoRows").innerHTML = [
+    rowsEl.innerHTML = [
       ["File", name],
       ["Format", meta.format || "Unknown"],
       ["Size", formatBytes(stat?.size || 0)],
@@ -866,15 +894,17 @@ async function showGameInfo(name) {
       ["Cover", meta.coverType ? "yes" : "no"],
     ].map(([k, v]) => `<div class="game-info-row"><span>${esc(k)}</span><span>${esc(v)}</span></div>`).join("");
 
-    const playBtn = document.getElementById("gameInfoPlayBtn");
-    playBtn.textContent = started ? (mounted ? "Ready" : "Mount") : "Play";
-    playBtn.disabled = started && mounted;
-    playBtn.onclick = () => {
-      closeGameInfo();
-      playOrMountStoredGame(name);
-    };
-    document.getElementById("gameInfoModal").classList.add("visible");
-    document.getElementById("gameInfoModal").setAttribute("aria-hidden", "false");
+    const playBtn = byId("gameInfoPlayBtn");
+    if (playBtn) {
+      playBtn.textContent = started ? (mounted ? "Ready" : "Mount") : "Play";
+      playBtn.disabled = started && mounted;
+      playBtn.onclick = () => {
+        closeGameInfo();
+        playOrMountStoredGame(name);
+      };
+    }
+    modalEl.classList.add("visible");
+    modalEl.setAttribute("aria-hidden", "false");
   } catch(e) {
     log("Game info failed: " + e.message, "err");
     showToast("❌ Info failed: " + e.message);
@@ -882,7 +912,8 @@ async function showGameInfo(name) {
 }
 
 function closeGameInfo() {
-  const modal = document.getElementById("gameInfoModal");
+  const modal = byId("gameInfoModal");
+  if (!modal) return;
   modal.classList.remove("visible");
   modal.setAttribute("aria-hidden", "true");
 }
@@ -3094,14 +3125,15 @@ function flushLog() {
 }
 
 function renderLog() {
+  if (!logEl) return;
   const ft = filterText.toLowerCase();
   const vis = ft ? logLines.filter(e => e.raw.toLowerCase().includes(ft)) : logLines;
   logEl.innerHTML = vis.map(e => e.html).join("\n") + "\n";
   logEl.scrollTop = logEl.scrollHeight;
 }
 
-logFilter.addEventListener("input", () => { filterText = logFilter.value.trim(); renderLog(); });
-document.getElementById("clearLogBtn").addEventListener("click", () => { logLines = []; pendingLines = []; logEl.innerHTML = ""; });
+on(logFilter, "input", () => { filterText = logFilter.value.trim(); renderLog(); });
+on("clearLogBtn", "click", () => { logLines = []; pendingLines = []; if (logEl) logEl.innerHTML = ""; });
 
 function log(text, level) {
   const ts  = new Date().toLocaleTimeString("en-GB", { hour12: false });
@@ -3114,8 +3146,8 @@ function log(text, level) {
 
 /* ── Status ─────────────────────────────────────────────────────── */
 function setStatus(text, kind) {
-  statusEl.textContent = text;
-  statusDot.className  = "status-dot" + (kind ? " " + kind : "");
+  if (statusEl) statusEl.textContent = text;
+  if (statusDot) statusDot.className = "status-dot" + (kind ? " " + kind : "");
   // also update the always-visible stage overlay
   if (stageMiniTextEl) stageMiniTextEl.textContent = text;
   if (stageDotEl) stageDotEl.className = "stage-dot" + (kind ? " " + kind : "");
@@ -3123,14 +3155,14 @@ function setStatus(text, kind) {
 }
 
 function showLoading(label, progress) {
-  loadOverlay.classList.add("visible");
-  loadLabel.textContent = label;
-  progressBar.style.width = (progress != null && progress >= 0) ? (progress * 100).toFixed(1) + "%" : "0%";
+  loadOverlay?.classList.add("visible");
+  if (loadLabel) loadLabel.textContent = label;
+  if (progressBar) progressBar.style.width = (progress != null && progress >= 0) ? (progress * 100).toFixed(1) + "%" : "0%";
 }
 function hideLoading() {
-  loadOverlay.classList.remove("visible");
-  progressBar.style.width = "0%";
-  loadLabel.textContent = "";
+  loadOverlay?.classList.remove("visible");
+  if (progressBar) progressBar.style.width = "0%";
+  if (loadLabel) loadLabel.textContent = "";
 }
 
 /* ── System info panel ──────────────────────────────────────────── */
@@ -3631,6 +3663,7 @@ function shortGamepadName(id) {
 }
 
 function updateGamepadBadge() {
+  if (!gamepadBadge) return;
   const n = connectedGamepads.size;
   if (n === 0) { gamepadBadge.textContent = "\uD83C\uDFAE No controller"; gamepadBadge.className = "badge"; }
   else {
@@ -3644,6 +3677,10 @@ function updateGamepadBadge() {
 }
 
 function updateGamepadSelector() {
+  if (!gamepadSelect) {
+    updateGamepadBadge();
+    return;
+  }
   const previous = String(activeGamepadIndex);
   gamepadSelect.innerHTML = "";
 
@@ -3683,10 +3720,11 @@ function setActiveGamepadIndex(index, source = "selector") {
   updateGamepadSelector();
   reconnectKnownGamepadsForSDL("controller select", true);
   redispatchSelectedGamepadConnection("controller select");
-  canvas.focus();
+  canvas?.focus();
 }
 
 function flashGamepadBadge() {
+  if (!gamepadBadge) return;
   gamepadBadge.style.transition = "none";
   gamepadBadge.style.outline    = "2px solid var(--accent)";
   setTimeout(() => { gamepadBadge.style.transition = ""; gamepadBadge.style.outline = ""; }, 800);
@@ -3785,7 +3823,7 @@ function reconnectKnownGamepadsForSDL(reason, force = false) {
     if (dispatchSDLGamepadReconnect(gp, reason, force)) n++;
   }
   if (n > 0) {
-    canvas.focus();
+    canvas?.focus();
     flashGamepadBadge();
   }
   return n;
@@ -3802,7 +3840,7 @@ function startSmartGamepadPolling() {
 function onGamepadConnected(e) {
   const gp = e.gamepad;
   rememberGamepad(gp, e.__ppssppSynthetic ? "refreshed" : "connected", { refreshSDL: false });
-  canvas.focus();
+  canvas?.focus();
 }
 function onGamepadDisconnected(e) {
   const gp = e.gamepad; connectedGamepads.delete(gp.index);
@@ -3830,15 +3868,15 @@ function showGamepadDiag() {
   if (!found) log("GAMEPAD: no controller detected — press a button on your controller first.", "warn");
 }
 
-gamepadSelect.addEventListener("change", () => {
+on(gamepadSelect, "change", () => {
   const index = Number(gamepadSelect.value);
   setActiveGamepadIndex(Number.isInteger(index) ? index : -1);
 });
-gamepadSelect.addEventListener("pointerdown", () => {
+on(gamepadSelect, "pointerdown", () => {
   probeExistingGamepads();
   reconnectKnownGamepadsForSDL("controller menu", false);
 });
-gamepadSelect.addEventListener("focus", () => {
+on(gamepadSelect, "focus", () => {
   probeExistingGamepads();
 });
 window.addEventListener("focus", () => {
@@ -3859,7 +3897,11 @@ function probeWebGLFeaturesWithPref(powerPreference) {
   setInfoVal("iWebgl2", gl ? "yes" : "no", gl ? "good" : "bad");
   if (!gl) {
     log("WebGL2 unavailable — GLES3/WebGL2 rendering cannot start.", "err");
-    gpuBadge.textContent = "\uD83D\uDDA5 No WebGL2"; gpuBadge.className = "badge error"; return;
+    if (gpuBadge) {
+      gpuBadge.textContent = "\uD83D\uDDA5 No WebGL2";
+      gpuBadge.className = "badge error";
+    }
+    return;
   }
   const dbg      = gl.getExtension("WEBGL_debug_renderer_info");
   const renderer = dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER);
@@ -3897,14 +3939,16 @@ function probeWebGLFeaturesWithPref(powerPreference) {
                           typeof SharedArrayBuffer !== "undefined" ? "good" : "bad");
 
   const short = renderer.replace(/\(.*?\)/g,"").trim().slice(0,32);
-  gpuBadge.textContent = "\uD83D\uDDA5 " + short;
-  gpuBadge.className   = "badge active";
-  gpuBadge.title       = "[" + powerPreference + "]\n" + renderer + "\n" + vendor + "\n" + version + "\nGLSL: " + glslVer + "\nMaxTex: " + maxTex + "  MaxAniso: " + maxAniso + "\nstencil_texturing: " + hasStencil + "  multi_draw: " + hasMultiDraw;
+  if (gpuBadge) {
+    gpuBadge.textContent = "\uD83D\uDDA5 " + short;
+    gpuBadge.className   = "badge active";
+    gpuBadge.title       = "[" + powerPreference + "]\n" + renderer + "\n" + vendor + "\n" + version + "\nGLSL: " + glslVer + "\nMaxTex: " + maxTex + "  MaxAniso: " + maxAniso + "\nstencil_texturing: " + hasStencil + "  multi_draw: " + hasMultiDraw;
+  }
 }
 
 function probeWebGLFeatures() { probeWebGLFeaturesWithPref(gpuSelectEl?.value || "high-performance"); }
 
-gpuSelectEl.addEventListener("change", () => {
+on(gpuSelectEl, "change", () => {
   log('GPU selector changed to "' + gpuSelectEl.value + '" — re-probing WebGL...');
   probeWebGLFeaturesWithPref(gpuSelectEl.value);
 });
@@ -4068,7 +4112,7 @@ let fpsFrames = 0, fpsLast = performance.now();
   if (now - fpsLast >= 1000) {
     const fps = Math.round(fpsFrames * 1000 / (now - fpsLast));
     fpsFrames = 0; fpsLast = now;
-    if (started) { fpsBadge.style.display = "block"; fpsBadge.textContent = fps + " FPS"; }
+    if (started && fpsBadge) { fpsBadge.style.display = "block"; fpsBadge.textContent = fps + " FPS"; }
   }
   requestAnimationFrame(tickFps);
 })();
@@ -4076,6 +4120,10 @@ let fpsFrames = 0, fpsLast = performance.now();
 /* ── Launch ─────────────────────────────────────────────────────── */
 async function start() {
   if (started) return;
+  if (!canvas) {
+    setStatus("Runtime UI is not ready: canvas element missing", "err");
+    return;
+  }
   if (!window.crossOriginIsolated || typeof SharedArrayBuffer === "undefined") {
     await reloadForCrossOriginIsolation("launch");
     return;
@@ -4085,9 +4133,10 @@ async function start() {
   document.body.classList.add("emulator-started");
   log("Launch button clicked.", "info");
   setStartButtonMode("loading");
-  fileLabel.classList.add("disabled"); fileInput.disabled = true;
-  gpuSelectEl.disabled = true;
-  canvas.focus();
+  fileLabel?.classList.add("disabled");
+  if (fileInput) fileInput.disabled = true;
+  if (gpuSelectEl) gpuSelectEl.disabled = true;
+  canvas?.focus();
   showLoading("Initializing audio\u2026");
   await selectBuildDir();
 
@@ -4103,7 +4152,7 @@ async function start() {
   } catch(e) { log("AUDIO: pre-init AudioContext failed: " + (e?.message || e), "warn"); }
 
   let gameArg = null;
-  const chosenPowerPref = gpuSelectEl.value;
+  const chosenPowerPref = gpuSelectEl?.value || "high-performance";
   log('GPU powerPreference: "' + chosenPowerPref + '"', "info");
   if (localStorage.getItem("ppsspp_touch_mouse_fallback") === "1") {
     installTouchMouseShim();
@@ -4171,7 +4220,7 @@ async function start() {
       hideLoading();
       setStartButtonMode("running");
       // Show runtime game loader button
-      document.getElementById("runtimeGameLabel").style.display = "";
+      if (runtimeGameLabel) runtimeGameLabel.style.display = "";
       // Start auto-persist loop (every 30s)
       startAutoPersist();
       updateStorageInfo();
@@ -4287,25 +4336,25 @@ function installTouchMouseShim() {
 }
 
 /* ── Event wiring ───────────────────────────────────────────────── */
-fileInput.addEventListener("change", () => {
-  selectedGame = fileInput.files[0] || null;
+on(fileInput, "change", () => {
+  selectedGame = fileInput?.files?.[0] || null;
   selectedStoredGame = null;
-  fileLabel.title = selectedGame ? selectedGame.name : "Open game";
+  if (fileLabel) fileLabel.title = selectedGame ? selectedGame.name : "Open game";
   // Update the visible text node inside the label
-  const textNode = fileLabel.firstChild;
+  const textNode = fileLabel?.firstChild;
   if (textNode && textNode.nodeType === 3)
     textNode.textContent = (selectedGame ? "\uD83D\uDCC2 " + selectedGame.name : "\uD83D\uDCC2 Open Game") + " ";
   updateIdleOverlay();
   setStatus(selectedGame ? "Selected: " + selectedGame.name : "Ready. Open a game file or use Library.");
 });
 
-startBtn.addEventListener("click", () => {
+on(startBtn, "click", () => {
   start();
 });
-idleStartBtn.addEventListener("click", start);
+on(idleStartBtn, "click", start);
 
-document.getElementById("refreshLibraryBtn").addEventListener("click", refreshLibrary);
-document.getElementById("libraryGrid").addEventListener("click", e => {
+on("refreshLibraryBtn", "click", refreshLibrary);
+on("libraryGrid", "click", e => {
   const button = e.target.closest("button[data-action]");
   if (!button) return;
   const name = button.dataset.game;
@@ -4315,35 +4364,35 @@ document.getElementById("libraryGrid").addEventListener("click", e => {
   else if (button.dataset.action === "drive-upload") runDriveAction("upload-game", () => uploadSingleGameToDrive(name));
   else if (button.dataset.action === "delete") deleteStoredFile(VIRTUAL_GAME_DIR + "/" + name);
 });
-document.getElementById("libraryImportFile").addEventListener("change", e => {
+on("libraryImportFile", "change", e => {
   const f = e.target.files[0]; if (!f) return;
   e.target.value = "";
   addGameToLibrary(f);
 });
-document.getElementById("libraryDownloadUrlBtn").addEventListener("click", () => {
-  addGameURLToLibrary(document.getElementById("libraryUrlInput").value);
+on("libraryDownloadUrlBtn", "click", () => {
+  addGameURLToLibrary(byId("libraryUrlInput")?.value || "");
 });
-document.getElementById("libraryUrlInput").addEventListener("keydown", e => {
+on("libraryUrlInput", "keydown", e => {
   if (e.key !== "Enter") return;
   e.preventDefault();
   addGameURLToLibrary(e.currentTarget.value);
 });
-document.getElementById("gameInfoCloseBtn").addEventListener("click", closeGameInfo);
-document.getElementById("gameInfoModal").addEventListener("click", e => {
+on("gameInfoCloseBtn", "click", closeGameInfo);
+on("gameInfoModal", "click", e => {
   if (e.target.id === "gameInfoModal") closeGameInfo();
 });
 
 // ── Runtime game loading ─────────────────────────────────────────
-document.getElementById("runtimeGameFile").addEventListener("change", e => {
+runtimeGameInput?.addEventListener("change", e => {
   const f = e.target.files[0]; if (!f) return;
   e.target.value = "";
   loadGameAtRuntime(f);
 });
 
 // ── Saves tab buttons ─────────────────────────────────────────────
-document.getElementById("refreshSavesBtn").addEventListener("click", refreshSavesTab);
-document.getElementById("exportAllSavesBtn").addEventListener("click", exportSaves);
-document.getElementById("savesList").addEventListener("click", async e => {
+on("refreshSavesBtn", "click", refreshSavesTab);
+on("exportAllSavesBtn", "click", exportSaves);
+on("savesList", "click", async e => {
   const button = e.target.closest("button[data-save-action]");
   if (!button) return;
   const action = button.dataset.saveAction;
@@ -4366,11 +4415,11 @@ document.getElementById("savesList").addEventListener("click", async e => {
     log("Save action failed: " + (err?.message || err), "err");
   }
 });
-document.getElementById("importSaveSlotFile").addEventListener("change", e => {
+on("importSaveSlotFile", "change", e => {
   const f = e.target.files[0]; if (!f) return;
   importSaveSlot(f); e.target.value = "";
 });
-document.getElementById("deleteAllSavesBtn").addEventListener("click", async () => {
+on("deleteAllSavesBtn", "click", async () => {
   if (!confirm("Delete ALL save data and save states?\nThis cannot be undone.")) return;
   // Delete only save-related OPFS entries (not config files or games)
   const all = await opfsWalk();
@@ -4405,16 +4454,16 @@ document.getElementById("deleteAllSavesBtn").addEventListener("click", async () 
 });
 
 // ── Storage panel buttons ────────────────────────────────────────
-document.getElementById("syncNowBtn").addEventListener("click", async () => {
+on("syncNowBtn", "click", async () => {
   const FS = window.FS;
   if (!FS) { showToast("⚠ Start PPSSPP first"); return; }
   await persistFiles(FS, "manual");
   showToast("✓ Synced to OPFS");
 });
 
-document.getElementById("exportSavesBtn").addEventListener("click", exportSaves);
+on("exportSavesBtn", "click", exportSaves);
 
-document.getElementById("importSavesFile").addEventListener("change", e => {
+on("importSavesFile", "change", e => {
   const f = e.target.files[0]; if (!f) return;
   e.target.value = "";
   importSaves(f);
@@ -4438,7 +4487,7 @@ window.addEventListener("storage", e => {
     disconnectGoogleDrive();
   }
 });
-document.getElementById("saveGoogleClientIdBtn").addEventListener("click", () => {
+on("saveGoogleClientIdBtn", "click", () => {
   const value = (googleClientIdInput?.value || "").trim();
   if (value) localStorage.setItem(GOOGLE_CLIENT_ID_KEY, value);
   else localStorage.removeItem(GOOGLE_CLIENT_ID_KEY);
@@ -4448,17 +4497,19 @@ document.getElementById("saveGoogleClientIdBtn").addEventListener("click", () =>
   setDriveInfo(value ? "Client ID saved" : "Client ID cleared", value ? "good" : "");
   showToast(value ? "Google client ID saved" : "Google client ID cleared");
 });
-document.getElementById("toggleGoogleClientIdBtn").addEventListener("click", () => {
+on("toggleGoogleClientIdBtn", "click", () => {
   if (!googleClientIdInput) return;
   const visible = googleClientIdInput.type === "text";
   googleClientIdInput.type = visible ? "password" : "text";
-  const button = document.getElementById("toggleGoogleClientIdBtn");
-  button.title = visible ? "Show client ID" : "Hide client ID";
-  button.textContent = visible ? "\uD83D\uDC41" : "\u25CF";
+  const button = byId("toggleGoogleClientIdBtn");
+  if (button) {
+    button.title = visible ? "Show client ID" : "Hide client ID";
+    button.textContent = visible ? "\uD83D\uDC41" : "\u25CF";
+  }
 });
-document.getElementById("driveConnectBtn").addEventListener("click", connectGoogleDrive);
-document.getElementById("driveDisconnectBtn").addEventListener("click", disconnectGoogleDrive);
-document.getElementById("driveRefreshBtn").addEventListener("click", async () => {
+on("driveConnectBtn", "click", connectGoogleDrive);
+on("driveDisconnectBtn", "click", disconnectGoogleDrive);
+on("driveRefreshBtn", "click", async () => {
   try { await runDriveAction("refresh", refreshDriveList); showToast("✓ Drive refreshed"); }
   catch(e) {
     const message = googleAuthErrorMessage(e);
@@ -4467,18 +4518,18 @@ document.getElementById("driveRefreshBtn").addEventListener("click", async () =>
     showToast("❌ " + message, 5000);
   }
 });
-document.getElementById("driveUploadSavesBtn").addEventListener("click", () => runDriveAction("upload-saves", uploadSavesToDrive));
-document.getElementById("driveRestoreSavesBtn").addEventListener("click", () => runDriveAction("restore-saves", () => restoreDriveSave()));
-document.getElementById("driveUploadGamesBtn").addEventListener("click", () => runDriveAction("upload-games", uploadGamesToDrive));
-document.getElementById("driveDownloadGamesBtn").addEventListener("click", () => runDriveAction("download-games", downloadAllDriveGames));
+on("driveUploadSavesBtn", "click", () => runDriveAction("upload-saves", uploadSavesToDrive));
+on("driveRestoreSavesBtn", "click", () => runDriveAction("restore-saves", () => restoreDriveSave()));
+on("driveUploadGamesBtn", "click", () => runDriveAction("upload-games", uploadGamesToDrive));
+on("driveDownloadGamesBtn", "click", () => runDriveAction("download-games", downloadAllDriveGames));
 
 // Drive auto-sync controls
-document.getElementById("driveAutoSyncToggle").addEventListener("change", e => {
+on("driveAutoSyncToggle", "change", e => {
   localStorage.setItem(GOOGLE_AUTO_SYNC_KEY, e.target.checked ? "1" : "0");
   restartDriveAutoSyncTimer();
   showToast(e.target.checked ? "✓ Drive auto-sync enabled" : "Drive auto-sync disabled");
 });
-document.getElementById("driveAutoSyncInterval").addEventListener("change", e => {
+on("driveAutoSyncInterval", "change", e => {
   localStorage.setItem(GOOGLE_AUTO_SYNC_RATE_KEY, e.target.value);
   restartDriveAutoSyncTimer();
 });
@@ -4500,7 +4551,7 @@ driveRemoteList?.addEventListener("click", e => {
   }
 });
 
-document.getElementById("clearStorageBtn").addEventListener("click", async () => {
+on("clearStorageBtn", "click", async () => {
   if (!confirm("Delete ALL saved data and stored games from OPFS? This cannot be undone.")) return;
   await opfsClearAll();
   _lastPersistTime = 0;
@@ -4552,9 +4603,9 @@ function togglePPSSPPFullscreen() {
   toggleFullscreen();
 }
 
-fullscreenBtn.addEventListener("click", () => {
+on(fullscreenBtn, "click", () => {
   togglePPSSPPFullscreen();
-  canvas.focus();
+  canvas?.focus();
   describeAudio();
 });
 

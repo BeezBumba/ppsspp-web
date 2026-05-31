@@ -626,7 +626,7 @@ body.panel-open aside { display: grid; }
     min-width: 0;
     overflow: hidden;
   }
-  #fileLabel, #startBtn, #runtimeGameLabel {
+  #fileLabel, #startBtn, #runtimeIsoLabel {
     width: 40px;
     min-width: 40px;
     max-width: 40px;
@@ -636,15 +636,15 @@ body.panel-open aside { display: grid; }
   /* Show only the Lucide icon inside, hide text label */
   #fileLabel .lucide,
   #startBtn .lucide,
-  #runtimeGameLabel .lucide {
+  #runtimeIsoLabel .lucide {
     width: 17px; height: 17px;
     display: block;
     flex-shrink: 0;
   }
   #fileLabel .btn-lbl,
   #startBtn .btn-lbl,
-  #runtimeGameLabel .btn-lbl { display: none; }
-  #runtimeGameLabel[style*="display:none"] { display: none !important; }
+  #runtimeIsoLabel .btn-lbl { display: none; }
+  #runtimeIsoLabel[style*="display:none"] { display: none !important; }
   #displayGroup {
     grid-column: 3;
     justify-self: stretch;
@@ -933,7 +933,7 @@ body.panel-open aside { display: grid; }
   .logo,
   #fileLabel,
   #startBtn,
-  #runtimeGameLabel,
+  #runtimeIsoLabel,
   #fullscreenBtn,
   .top-official-link,
   .panel-btn {

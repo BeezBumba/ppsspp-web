@@ -9,7 +9,7 @@
  * The cache is versioned; old caches are pruned on activate.
  */
 
-const CACHE_VERSION = "ppsspp-angular-v1";
+const CACHE_VERSION = "ppsspp-angular-v3";
 
 // Files that form the app shell – fetched fresh every time if online
 const SHELL_FILES = [
@@ -57,7 +57,8 @@ self.addEventListener("fetch", event => {
   // App shell → network-first, fallback to cache
   const isShell = pathname.endsWith("/") ||
                   pathname.endsWith("/index.html") ||
-                  pathname.endsWith("/manifest.webmanifest");
+                  pathname.endsWith("/manifest.webmanifest") ||
+                  pathname.endsWith("/ppsspp-runtime.js");
 
   if (isShell) {
     event.respondWith(networkFirst(request));

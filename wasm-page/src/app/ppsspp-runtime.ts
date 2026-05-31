@@ -54,6 +54,7 @@ const PPSSPP_ICONS = {
   Upload,
   X,
 };
+const RUNTIME_ASSET_VERSION = '2026-05-31-safe-dom-listeners';
 
 @Injectable({ providedIn: 'root' })
 export class PpssppRuntime {
@@ -67,7 +68,7 @@ export class PpssppRuntime {
 
   private async start(): Promise<void> {
     createIcons({ icons: PPSSPP_ICONS });
-    await this.loadScript('ppsspp-runtime.js', 'ppsspp-runtime');
+    await this.loadScript(`ppsspp-runtime.js?v=${RUNTIME_ASSET_VERSION}`, 'ppsspp-runtime');
   }
 
   private loadScript(src: string, id: string): Promise<void> {
