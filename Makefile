@@ -29,7 +29,7 @@ help:
 	@echo "  make pages                 Build ppsspp-wasm release, then build the static Pages app"
 	@echo "  make wasm-dev              Build the active WASM_ROOT ($(WASM_ROOT)) for dev"
 	@echo "  make wasm-release          Build the active WASM_ROOT ($(WASM_ROOT)) for release"
-	@echo "  make serve                 Serve the active WASM_ROOT ($(WASM_ROOT))"
+	@echo "  make serve                 Build the Angular app and serve the active WASM_ROOT ($(WASM_ROOT))"
 	@echo "  make server-docker-up      Serve through Docker, mounting WASM_ROOT"
 	@echo "  make wasm-status           Show web, submodule, and local clone status"
 	@echo "  make wasm-submodule-branch Put the submodule on branch $(WASM_BRANCH) for local edits"
@@ -93,7 +93,7 @@ wasm-release:
 wasm-release-local:
 	$(MAKE) wasm-release WASM_ROOT="$(LOCAL_WASM_ROOT)"
 
-serve: wasm-root-check
+serve: app-build wasm-root-check
 	python3 server/serve.py --https --wasm-root $(WASM_ROOT) --bind $(BIND) --port $(PORT) --adhoc-ws
 
 serve-local:

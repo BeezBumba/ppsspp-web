@@ -762,7 +762,7 @@ async function updateStorageInfo() {
     const listEl = document.getElementById("opfsFileList");
     if (listEl) {
       if (!allFiles.length) {
-        listEl.innerHTML = `<span style="padding:8px 12px;color:var(--muted);font-size:11px;display:block">No files persisted yet.</span>`;
+        listEl.innerHTML = `<span class="empty-row">No files persisted yet.</span>`;
       } else {
         // Group by category
         const cats = new Map();
@@ -780,7 +780,7 @@ async function updateStorageInfo() {
         let html = "";
         for (const [cat, files] of sorted) {
           const catBytes = files.reduce((s, f) => s + f.size, 0);
-          html += `<div class="opfs-cat-header"><span>${esc(cat)} (${files.length})</span><span style="color:var(--info);font-size:9.5px">${formatBytes(catBytes)}</span></div>`;
+          html += `<div class="opfs-cat-header"><span>${esc(cat)} (${files.length})</span><span class="opfs-cat-size">${formatBytes(catBytes)}</span></div>`;
           for (const { path, size } of files.sort((a, b) => a.path.localeCompare(b.path))) {
             const name = path.split("/").pop();
             html += `<div class="opfs-file-row">`;
@@ -1229,7 +1229,7 @@ async function refreshSavesTab() {
 
   // Show spinner while loading
   empty.style.display = "block";
-  empty.innerHTML = "<span style='color:var(--muted)'>Loading saves…</span>";
+  empty.innerHTML = `<span class="saves-loading">Loading saves&hellip;</span>`;
   list.style.display = "none";
 
   let fileMap;
@@ -1307,7 +1307,7 @@ async function refreshSavesTab() {
       for (const f of files) allStateFiles.push({ f, slotDir, game, flat });
     }
     const ssBytes = allStateFiles.reduce((s, { f }) => s + f.size, 0);
-    html += `<div class="save-section-label" style="margin-top:6px"><span>${svgIcon("gamepad")} Save States</span><span>${allStateFiles.length} state${allStateFiles.length !== 1 ? "s" : ""} · ${formatBytes(ssBytes)}</span></div>`;
+    html += `<div class="save-section-label save-section-spaced"><span>${svgIcon("gamepad")} Save States</span><span>${allStateFiles.length} state${allStateFiles.length !== 1 ? "s" : ""} · ${formatBytes(ssBytes)}</span></div>`;
 
     // Pair .ppst/.sst with same-base .jpg thumbnail
     const stateByBase = new Map(); // base → { dataFile, thumbFile, slotDir, game, flat }
