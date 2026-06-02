@@ -209,6 +209,10 @@ body.browser-fullscreen .stage {
   padding: 0;
   background: #000;
 }
+body.browser-fullscreen #fpsBadge,
+body.browser-fullscreen #stageMini {
+  display: none !important;
+}
 .stage:fullscreen canvas,
 .stage:-webkit-full-screen canvas,
 body.browser-fullscreen canvas,

@@ -181,6 +181,12 @@ function syncViewportSize(options = {}) {
   document.documentElement.style.setProperty("--visual-h", safeVisualHeight + "px");
 }
 
+function syncFullscreenOverlays() {
+  const activeFullscreen = !!fullscreenElement();
+  document.body?.classList.toggle("browser-fullscreen", activeFullscreen);
+  if (activeFullscreen && fpsBadge) fpsBadge.style.display = "none";
+}
+
 function notifyRuntimeResize(options = {}) {
   syncViewportSize(options);
   window.dispatchEvent(new Event("resize"));
@@ -4269,7 +4275,12 @@ let fpsFrames = 0, fpsLast = performance.now();
   if (now - fpsLast >= 1000) {
     const fps = Math.round(fpsFrames * 1000 / (now - fpsLast));
     fpsFrames = 0; fpsLast = now;
-    if (started && fpsBadge) { fpsBadge.style.display = "block"; fpsBadge.textContent = fps + " FPS"; }
+    if (started && fpsBadge && !fullscreenElement()) {
+      fpsBadge.style.display = "block";
+      fpsBadge.textContent = fps + " FPS";
+    } else if (fpsBadge) {
+      fpsBadge.style.display = "none";
+    }
   }
   requestAnimationFrame(tickFps);
 })();
@@ -4781,6 +4792,7 @@ async function exitBrowserFullscreen() {
 }
 
 function handleFullscreenChange() {
+  syncFullscreenOverlays();
   scheduleRuntimeResize(true);
   if (fullscreenElement()) {
     _fsCursorTimer = setTimeout(_hideCursor, 2000);
