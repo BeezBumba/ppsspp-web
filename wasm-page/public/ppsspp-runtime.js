@@ -32,6 +32,10 @@ const WEB_NATIVE_TIMING_CONFIG = [
   ["Sound", "FillAudioGaps", "True"],
   ["Sound", "AudioSyncMode", "0"],
 ];
+const WEB_STABILITY_CONFIG = [
+  ["General", "IgnoreBadMemAccess", "True"],
+  ["CPU", "FastMemoryAccess", "False"],
+];
 const MOBILE_TOUCH_CONFIG = [
   ["General", "UIScaleFactor", "3"],
   ["Control", "ShowTouchControls", "True"],
@@ -821,6 +825,7 @@ async function deleteStoredFile(path) {
     try {
       await opfsDeleteGame(name);
       if (window.FS) { try { window.FS.unlink(path); } catch(e) {} }
+      refreshEmulatorGameBrowser("deleted " + name);
       showToast("🗑 Deleted " + name);
       await refreshLibrary();
       updateStorageInfo();
@@ -854,6 +859,7 @@ async function playOrMountStoredGame(name) {
     FS.mkdirTree(VIRTUAL_GAME_DIR);
     FS.writeFile(path, await opfsReadGame(name));
     log("Mounted stored game file from OPFS: " + path, "ok");
+    refreshEmulatorGameBrowser("mounted " + name);
     showToast("✓ " + name + " mounted");
     refreshLibrary();
   } catch(e) {
@@ -916,6 +922,22 @@ function closeGameInfo() {
   if (!modal) return;
   modal.classList.remove("visible");
   modal.setAttribute("aria-hidden", "true");
+}
+
+function refreshEmulatorGameBrowser(reason) {
+  const refresh = window.Module?._PPSSPP_RefreshGameBrowser;
+  if (typeof refresh !== "function") {
+    log("PPSSPP UI refresh hook is not available in this WASM build.", "dim");
+    return false;
+  }
+  try {
+    refresh();
+    log("PPSSPP UI refresh requested" + (reason ? ": " + reason : "") + ".", "ok");
+    return true;
+  } catch(e) {
+    log("PPSSPP UI refresh failed: " + (e?.message || e), "warn");
+    return false;
+  }
 }
 
 const mountOrSelectStoredGame = playOrMountStoredGame;
@@ -1032,10 +1054,6 @@ async function addGameToLibrary(file) {
 
 async function storeGameBytes(name, bytes) {
   const storedName = await opfsPutGame(name, bytes);
-  if (window.FS) {
-    window.FS.mkdirTree(VIRTUAL_GAME_DIR);
-    window.FS.writeFile(VIRTUAL_GAME_DIR + "/" + storedName, bytes);
-  }
   return storedName;
 }
 
@@ -2092,6 +2110,9 @@ async function forceGamesDirectoryConfig(FS) {
       for (const [section, key, value] of WEB_NATIVE_TIMING_CONFIG) {
         patched = patchIniValue(patched, section, key, value);
       }
+      for (const [section, key, value] of WEB_STABILITY_CONFIG) {
+        patched = patchIniValue(patched, section, key, value);
+      }
       if (applyMobileTouchDefaults) {
         for (const [section, key, value] of MOBILE_TOUCH_CONFIG) {
           patched = patchIniValue(patched, section, key, value);
@@ -2922,6 +2943,7 @@ async function loadGameAtRuntime(file) {
     try { FS.mkdirTree(VIRTUAL_GAME_DIR); } catch(e) {}
     FS.writeFile(path, bytes);
     await opfsPutGame(file.name, bytes);
+    refreshEmulatorGameBrowser("mounted " + safe);
     log("Game file ready at " + path + " and saved to OPFS. Open it from PPSSPP\u2019s game browser (Home \u2192 Games).", "ok");
     showToast("✓ " + file.name + " loaded → open from PPSSPP game browser", 5000);
     refreshLibrary();
@@ -4048,21 +4070,8 @@ async function preloadStoredGames(FS) {
   }
 
   FS.mkdirTree(VIRTUAL_GAME_DIR);
-  let ok = 0;
-  for (const { path, data, size } of games) {
-    const target = VIRTUAL_GAME_DIR + "/" + path;
-    try {
-      setStatus("Restoring game " + (ok + 1) + "/" + games.length + ": " + path, "run");
-      showLoading("Restoring game: " + path);
-      FS.writeFile(target, data);
-      ok++;
-      log("OPFS game mounted: " + target + " (" + formatBytes(size || data?.byteLength || 0) + ")", "ok");
-    } catch(e) {
-      log("OPFS game restore failed " + path + ": " + e.message, "warn");
-    }
-  }
-  log("OPFS games: mounted " + ok + "/" + games.length + " stored file(s) into " + VIRTUAL_GAME_DIR + ".", "ok");
-  return ok;
+  log("OPFS games: " + games.length + " stored file(s) available. They will mount on demand.", "ok");
+  return games.length;
 }
 
 async function preloadGame(FS) {
