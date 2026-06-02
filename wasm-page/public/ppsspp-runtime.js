@@ -4327,7 +4327,7 @@ async function start() {
     arguments: [],
     locateFile(path) {
       let url = BUILD_DIR + path;
-      if (path.endsWith(".wasm") || path.endsWith(".worker.js")) url += "?v=" + BUILD_STAMP;
+      if (path.endsWith(".wasm") || path.endsWith(".worker.js") || path.endsWith(".data")) url += "?v=" + BUILD_STAMP;
       log("locateFile: " + path + " -> " + url);
       return url;
     },
