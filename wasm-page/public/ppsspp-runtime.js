@@ -34,7 +34,7 @@ const WEB_NATIVE_TIMING_CONFIG = [
 ];
 const WEB_STABILITY_CONFIG = [
   ["General", "IgnoreBadMemAccess", "True"],
-  ["CPU", "FastMemoryAccess", "False"],
+  ["CPU", "FastMemoryAccess", "True"],
 ];
 const MOBILE_TOUCH_CONFIG = [
   ["General", "UIScaleFactor", "3"],
@@ -512,6 +512,12 @@ async function opfsReadGame(name) {
   const { dir, name: fileName } = await opfsParent(name, false, OPFS_GAMES_DIR);
   const handle = await dir.getFileHandle(fileName);
   return new Uint8Array(await (await handle.getFile()).arrayBuffer());
+}
+
+async function opfsGetGameFile(name) {
+  const { dir, name: fileName } = await opfsParent(name, false, OPFS_GAMES_DIR);
+  const handle = await dir.getFileHandle(fileName);
+  return await handle.getFile();
 }
 
 async function opfsDeleteGame(name) {
@@ -4228,12 +4234,67 @@ async function preloadStoredGames(FS) {
   return ok;
 }
 
+let fastGameMountSeq = 0;
+function makeWorkerFsGameFile(file, safeName) {
+  if (!file || file.name === safeName || typeof File !== "function") return file;
+  return new File([file], safeName, {
+    type: file.type || "application/octet-stream",
+    lastModified: file.lastModified || Date.now(),
+  });
+}
+
+function mountGameFileFast(FS, file, safeName, label) {
+  const workerFS = globalThis.WORKERFS || window.WORKERFS;
+  if (!workerFS || !FS?.mount) return null;
+
+  const mountFile = makeWorkerFsGameFile(file, safeName);
+  const mountDir = VIRTUAL_GAME_DIR + "/.fast-" + (++fastGameMountSeq);
+  try {
+    FS.mkdirTree(VIRTUAL_GAME_DIR);
+    FS.mkdirTree(mountDir);
+    FS.mount(workerFS, { files: [mountFile] }, mountDir);
+    const path = mountDir + "/" + mountFile.name;
+    log("Fast-mounted game via WORKERFS" + (label ? " (" + label + ")" : "") + ": " + path, "ok");
+    return path;
+  } catch(e) {
+    log("Fast game mount failed, falling back to MEMFS: " + e.message, "warn");
+    try { if (FS.analyzePath?.(mountDir)?.exists) FS.rmdir(mountDir); } catch(_) {}
+    return null;
+  }
+}
+
+function persistSelectedGameInBackground(file) {
+  if (!file) return;
+  (async () => {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    await opfsPutGame(file.name, bytes);
+    log("Game saved to OPFS after fast mount: " + file.name, "ok");
+    refreshLibrary();
+    updateStorageInfo();
+  })().catch(e => log("Could not persist fast-mounted game in OPFS: " + e.message, "warn"));
+}
+
 async function preloadGame(FS) {
   if (!selectedGame && !selectedStoredGame) return null;
   FS.mkdirTree(VIRTUAL_GAME_DIR);
   const sourceName = selectedGame ? selectedGame.name : selectedStoredGame;
   const safe = sourceName.replace(/[^a-zA-Z0-9._-]/g, "_");
   const path = VIRTUAL_GAME_DIR + "/" + safe;
+  setStatus("Fast loading game: " + sourceName, "run");
+  showLoading("Fast loading game: " + sourceName);
+
+  if (selectedGame) {
+    const fastPath = mountGameFileFast(FS, selectedGame, safe, "selected file");
+    if (fastPath) {
+      persistSelectedGameInBackground(selectedGame);
+      return fastPath;
+    }
+  } else if (selectedStoredGame) {
+    const storedFile = await opfsGetGameFile(selectedStoredGame);
+    const fastPath = mountGameFileFast(FS, storedFile, safe, "OPFS");
+    if (fastPath) return fastPath;
+  }
+
   setStatus("Loading game into memory: " + sourceName, "run");
   showLoading("Loading game: " + sourceName);
   const bytes = selectedGame

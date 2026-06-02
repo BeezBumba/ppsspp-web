@@ -54,7 +54,7 @@ const PPSSPP_ICONS = {
   Upload,
   X,
 };
-const RUNTIME_ASSET_VERSION = '2026-06-02-fullscreen-overlay-hide';
+const RUNTIME_ASSET_VERSION = '2026-06-03-fast-memory-default';
 
 @Injectable({ providedIn: 'root' })
 export class PpssppRuntime {
