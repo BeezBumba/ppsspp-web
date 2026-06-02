@@ -18,6 +18,7 @@
   --radius-sm: 6px;
   --shadow:    0 8px 32px rgba(0,0,0,.6);
   --glow:      0 0 0 2px rgba(0,212,170,.3);
+  --viewport-w: 100vw;
   --app-h:     100dvh;
   --stage-pad: 12px;
   --panel-w:   clamp(320px, 28vw, 420px);
@@ -190,22 +191,33 @@ canvas {
   box-shadow: var(--shadow);
   touch-action: none;
 }
-canvas:fullscreen {
-  width: 100vw !important;
-  height: 100vh !important;
-  max-width: 100vw !important;
-  max-height: 100vh !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  object-fit: contain;
+:fullscreen,
+:-webkit-full-screen {
   background: #000;
 }
+.stage:fullscreen,
+.stage:-webkit-full-screen {
+  width: var(--viewport-w) !important;
+  height: var(--app-h) !important;
+  padding: 0 !important;
+  background: #000 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+body.browser-fullscreen .stage {
+  padding: 0;
+  background: #000;
+}
+.stage:fullscreen canvas,
+.stage:-webkit-full-screen canvas,
+body.browser-fullscreen canvas,
+canvas:fullscreen,
 canvas:-webkit-full-screen {
-  width: 100vw !important;
-  height: 100vh !important;
-  max-width: 100vw !important;
-  max-height: 100vh !important;
+  width: min(var(--viewport-w), calc(var(--app-h) * 16 / 9)) !important;
+  height: min(var(--app-h), calc(var(--viewport-w) * 9 / 16)) !important;
+  max-width: var(--viewport-w) !important;
+  max-height: var(--app-h) !important;
   border: 0 !important;
   border-radius: 0 !important;
   box-shadow: none !important;
@@ -695,15 +707,15 @@ body.panel-open aside { display: grid; }
       #000;
   }
   canvas {
-    width: min(100vw, calc((var(--app-h) - var(--h)) * 16 / 9));
-    max-width: 100vw;
+    width: min(var(--viewport-w), calc((var(--app-h) - var(--h)) * 16 / 9));
+    max-width: var(--viewport-w);
     max-height: calc(var(--app-h) - var(--h));
     border: none;
     border-radius: 0;
     box-shadow: none;
   }
   #idleOverlay {
-    width: min(100vw, calc((var(--app-h) - var(--h)) * 16 / 9));
+    width: min(var(--viewport-w), calc((var(--app-h) - var(--h)) * 16 / 9));
     max-height: calc(var(--app-h) - var(--h));
     border: none; border-radius: 0;
     padding: 18px 18px max(54px, env(safe-area-inset-bottom));

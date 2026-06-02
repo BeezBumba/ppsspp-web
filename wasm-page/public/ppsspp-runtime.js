@@ -115,6 +115,15 @@ const ADHOC_WS_PORT      = 27312;
 
 let stableViewportWidth = 0;
 let stableViewportHeight = 0;
+let stableViewportOrientation = "";
+
+function fullscreenElement() {
+  return document.fullscreenElement || document.webkitFullscreenElement || null;
+}
+
+function viewportOrientation(width = window.innerWidth || 0, height = window.innerHeight || 0) {
+  return width >= height ? "landscape" : "portrait";
+}
 
 function isTextEntryActive() {
   const el = document.activeElement;
@@ -124,21 +133,33 @@ function isTextEntryActive() {
 }
 
 function syncViewportAfterFocus() {
-  syncViewportSize();
+  syncViewportSize({ reset: false });
   setTimeout(() => {
-    syncViewportSize();
+    syncViewportSize({ reset: false });
     if (isTextEntryActive()) {
       document.activeElement.scrollIntoView?.({ block: "nearest", inline: "nearest", behavior: "smooth" });
     }
   }, 260);
 }
 
-function syncViewportSize() {
+function syncViewportSize(options = {}) {
+  const reset = options?.reset === true;
   const vv = window.visualViewport;
+  const activeFullscreen = !!fullscreenElement();
+  const visualWidth = Math.round(vv?.width || window.innerWidth || document.documentElement.clientWidth || 0);
   const visualHeight = Math.round(vv?.height || window.innerHeight || document.documentElement.clientHeight || 0);
+  const layoutWidth = Math.round(window.innerWidth || document.documentElement.clientWidth || visualWidth);
   const layoutHeight = Math.round(window.innerHeight || document.documentElement.clientHeight || visualHeight);
-  const width = Math.round(vv?.width || window.innerWidth || document.documentElement.clientWidth || 0);
-  const widthChanged = !stableViewportWidth || Math.abs(width - stableViewportWidth) > 80;
+  const width = activeFullscreen ? Math.max(1, layoutWidth || visualWidth) : Math.max(1, visualWidth || layoutWidth);
+  const orientation = viewportOrientation(width, activeFullscreen ? layoutHeight : visualHeight);
+  const orientationChanged = stableViewportOrientation && stableViewportOrientation !== orientation;
+  let widthChanged = !stableViewportWidth || Math.abs(width - stableViewportWidth) > 80;
+  if (reset || orientationChanged) {
+    stableViewportWidth = 0;
+    stableViewportHeight = 0;
+    widthChanged = true;
+  }
+  stableViewportOrientation = orientation;
   const safeVisualHeight = Math.max(1, visualHeight || layoutHeight || 320);
   const safeLayoutHeight = Math.max(320, layoutHeight || safeVisualHeight);
 
@@ -153,13 +174,22 @@ function syncViewportSize() {
   }
 
   document.body?.classList.toggle("keyboard-open", keyboardOpen);
-  document.documentElement.style.setProperty("--app-h", Math.max(320, stableViewportHeight || visualHeight) + "px");
+  document.body?.classList.toggle("browser-fullscreen", activeFullscreen);
+  const appHeight = activeFullscreen ? Math.max(1, safeLayoutHeight || safeVisualHeight) : Math.max(320, stableViewportHeight || visualHeight);
+  document.documentElement.style.setProperty("--viewport-w", width + "px");
+  document.documentElement.style.setProperty("--app-h", appHeight + "px");
   document.documentElement.style.setProperty("--visual-h", safeVisualHeight + "px");
 }
 
-function notifyRuntimeResize() {
-  syncViewportSize();
+function notifyRuntimeResize(options = {}) {
+  syncViewportSize(options);
   window.dispatchEvent(new Event("resize"));
+}
+
+function scheduleRuntimeResize(reset = false) {
+  [0, 60, 140, 300, 650].forEach((delay, index) => {
+    setTimeout(() => notifyRuntimeResize({ reset: reset && index === 0 }), delay);
+  });
 }
 
 function emulatorLaunchArgs() {
@@ -170,13 +200,14 @@ function isMobileExperience() {
   return !!window.matchMedia?.("(pointer: coarse)")?.matches;
 }
 
-syncViewportSize();
-window.addEventListener("resize", syncViewportSize, { passive: true });
-window.addEventListener("orientationchange", () => setTimeout(notifyRuntimeResize, 120), { passive: true });
-window.visualViewport?.addEventListener("resize", syncViewportSize, { passive: true });
-window.visualViewport?.addEventListener("scroll", syncViewportSize, { passive: true });
+syncViewportSize({ reset: true });
+window.addEventListener("resize", () => syncViewportSize({ reset: false }), { passive: true });
+window.addEventListener("orientationchange", () => scheduleRuntimeResize(true), { passive: true });
+window.screen?.orientation?.addEventListener?.("change", () => scheduleRuntimeResize(true));
+window.visualViewport?.addEventListener("resize", () => scheduleRuntimeResize(false), { passive: true });
+window.visualViewport?.addEventListener("scroll", () => syncViewportSize({ reset: false }), { passive: true });
 document.addEventListener("focusin", syncViewportAfterFocus);
-document.addEventListener("focusout", () => setTimeout(syncViewportSize, 120));
+document.addEventListener("focusout", () => setTimeout(() => syncViewportSize({ reset: false }), 120));
 
 function setBuildDir(dir) {
   BUILD_DIR = dir;
@@ -249,6 +280,7 @@ function on(target, type, handler, options) {
 }
 
 const canvas          = byId("canvas");
+const stageEl         = document.querySelector(".stage");
 const fileInput       = byId("gameFile");
 const fileLabel       = byId("fileLabel");
 const runtimeGameLabel = byId("runtimeIsoLabel") || byId("runtimeGameLabel");
@@ -4702,35 +4734,93 @@ function _hideCursor() { document.body.classList.add("fs-cursor-hidden"); }
 function _showCursor() {
   document.body.classList.remove("fs-cursor-hidden");
   clearTimeout(_fsCursorTimer);
-  if (document.fullscreenElement) _fsCursorTimer = setTimeout(_hideCursor, 2000);
+  if (fullscreenElement()) _fsCursorTimer = setTimeout(_hideCursor, 2000);
 }
-document.addEventListener("fullscreenchange", () => {
-  setTimeout(notifyRuntimeResize, 80);
-  if (document.fullscreenElement) {
-    // entered fullscreen — hide cursor after 2 s
+
+function isFullscreenActive() {
+  return !!fullscreenElement();
+}
+
+function fullscreenTarget() {
+  return stageEl || canvas || document.documentElement;
+}
+
+async function requestBrowserFullscreen() {
+  const target = fullscreenTarget();
+  if (!target) return false;
+
+  try {
+    if (target.requestFullscreen) {
+      await target.requestFullscreen({ navigationUI: "hide" });
+      return true;
+    }
+    if (target.webkitRequestFullscreen) {
+      target.webkitRequestFullscreen();
+      return true;
+    }
+  } catch(e) {
+    log("Browser fullscreen request failed: " + (e?.message || e), "warn");
+  }
+  return false;
+}
+
+async function exitBrowserFullscreen() {
+  try {
+    if (document.exitFullscreen) {
+      await document.exitFullscreen();
+      return true;
+    }
+    if (document.webkitExitFullscreen) {
+      document.webkitExitFullscreen();
+      return true;
+    }
+  } catch(e) {
+    log("Browser fullscreen exit failed: " + (e?.message || e), "warn");
+  }
+  return false;
+}
+
+function handleFullscreenChange() {
+  scheduleRuntimeResize(true);
+  if (fullscreenElement()) {
     _fsCursorTimer = setTimeout(_hideCursor, 2000);
     document.addEventListener("mousemove", _showCursor);
     document.addEventListener("pointerdown", _showCursor);
   } else {
-    // exited fullscreen — always show cursor
     clearTimeout(_fsCursorTimer);
     document.body.classList.remove("fs-cursor-hidden");
     document.removeEventListener("mousemove", _showCursor);
     document.removeEventListener("pointerdown", _showCursor);
   }
-});
+}
 
-function togglePPSSPPFullscreen() {
+document.addEventListener("fullscreenchange", handleFullscreenChange);
+document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+
+async function togglePPSSPPFullscreen() {
+  if (isFullscreenActive()) {
+    if (await exitBrowserFullscreen()) {
+      scheduleRuntimeResize(true);
+      return;
+    }
+  }
+
+  if (await requestBrowserFullscreen()) {
+    scheduleRuntimeResize(true);
+    return;
+  }
+
   const toggleFullscreen = window.Module?._PPSSPP_ToggleFullscreen;
   if (typeof toggleFullscreen !== "function") {
     log("Fullscreen toggle requested before PPSSPP runtime is ready.", "warn");
     return;
   }
   toggleFullscreen();
+  scheduleRuntimeResize(true);
 }
 
-on(fullscreenBtn, "click", () => {
-  togglePPSSPPFullscreen();
+on(fullscreenBtn, "click", async () => {
+  await togglePPSSPPFullscreen();
   canvas?.focus();
   describeAudio();
 });
