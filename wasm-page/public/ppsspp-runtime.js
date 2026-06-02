@@ -109,6 +109,7 @@ const NETWORK_ENABLE_KEY = "ppsspp_network_enable";
 const NETWORK_SERVER_KEY = "ppsspp_network_server";
 const NETWORK_NICK_KEY   = "ppsspp_network_nick";
 const NETWORK_MAC_KEY    = "ppsspp_network_mac";
+const PRELOAD_FAVORITES_KEY = "ppsspp_preload_favorites";
 const ADHOC_WS_PORT      = 27312;
 
 let stableViewportWidth = 0;
@@ -215,6 +216,7 @@ const LUCIDE_PATHS = {
   gamepad:  '<line x1="6" y1="11" x2="10" y2="11"/><line x1="8" y1="9" x2="8" y2="13"/><line x1="15" y1="12" x2="15.01" y2="12"/><line x1="17" y1="10" x2="17.01" y2="10"/><path d="M6 3h12l2 7-6 3-2 3-2-3-6-3z"/>',
   info:           '<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>',
   menu:           '<line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="18" x2="20" y2="18"/>',
+  star:           '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
   'cloud-upload': '<path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/>',
 };
 function svgIcon(name, cls = "lucide") {
@@ -825,6 +827,7 @@ async function deleteStoredFile(path) {
     try {
       await opfsDeleteGame(name);
       if (window.FS) { try { window.FS.unlink(path); } catch(e) {} }
+      setPreloadFavorite(name, false);
       refreshEmulatorGameBrowser("deleted " + name);
       showToast("🗑 Deleted " + name);
       await refreshLibrary();
@@ -835,6 +838,23 @@ async function deleteStoredFile(path) {
     }
   } else {
     await deleteOpfsFile(path);
+  }
+}
+
+async function togglePreloadFavorite(name) {
+  const enable = !isPreloadFavorite(name);
+  setPreloadFavorite(name, enable);
+  if (!enable) {
+    showToast("Removed startup preload: " + name);
+    await refreshLibrary();
+    return;
+  }
+
+  showToast("Startup preload enabled: " + name);
+  if (started && window.FS && !window.FS.analyzePath?.(VIRTUAL_GAME_DIR + "/" + name)?.exists) {
+    await playOrMountStoredGame(name);
+  } else {
+    await refreshLibrary();
   }
 }
 
@@ -873,6 +893,7 @@ async function showGameInfo(name) {
     const meta = await ensureGameMetadata(name);
     const stat = (await opfsWalk(OPFS_GAMES_DIR, "", false)).find(g => g.path === name);
     const mounted = !!window.FS?.analyzePath?.(VIRTUAL_GAME_DIR + "/" + name).exists;
+    const preloads = isPreloadFavorite(name);
     const title = meta.title || prettyGameName(name);
     const cover = await readGameCoverURL(name, meta.coverType);
     if (cover) _libraryCoverURLs.push(cover);
@@ -897,8 +918,20 @@ async function showGameInfo(name) {
       ["Stored", "OPFS /" + OPFS_GAMES_DIR + "/" + name],
       ["Runtime", VIRTUAL_GAME_DIR + "/" + name],
       ["Mounted", mounted ? "yes" : "no"],
+      ["Preload", preloads ? "yes" : "no"],
       ["Cover", meta.coverType ? "yes" : "no"],
     ].map(([k, v]) => `<div class="game-info-row"><span>${esc(k)}</span><span>${esc(v)}</span></div>`).join("");
+
+    const favoriteBtn = byId("gameInfoFavoriteBtn");
+    if (favoriteBtn) {
+      favoriteBtn.innerHTML = `${svgIcon("star")} ${preloads ? "Preloads" : "Preload"}`;
+      favoriteBtn.classList.toggle("active", preloads);
+      favoriteBtn.setAttribute("aria-pressed", preloads ? "true" : "false");
+      favoriteBtn.onclick = async () => {
+        closeGameInfo();
+        await togglePreloadFavorite(name);
+      };
+    }
 
     const playBtn = byId("gameInfoPlayBtn");
     if (playBtn) {
@@ -955,6 +988,46 @@ function clearLibraryCoverURLs() {
   _libraryCoverURLs = [];
 }
 
+function loadPreloadFavorites() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(PRELOAD_FAVORITES_KEY) || "[]");
+    return Array.isArray(parsed) ? parsed.filter(name => typeof name === "string" && name) : [];
+  } catch(e) {
+    return [];
+  }
+}
+
+function savePreloadFavorites(names) {
+  const unique = [...new Set(names.filter(name => typeof name === "string" && name))].sort((a, b) => a.localeCompare(b));
+  localStorage.setItem(PRELOAD_FAVORITES_KEY, JSON.stringify(unique));
+  updatePreloadFavoriteSummary(unique.length);
+  return unique;
+}
+
+function isPreloadFavorite(name) {
+  return loadPreloadFavorites().includes(name);
+}
+
+function setPreloadFavorite(name, enabled) {
+  const favorites = loadPreloadFavorites();
+  const next = enabled ? [...favorites, name] : favorites.filter(item => item !== name);
+  return savePreloadFavorites(next);
+}
+
+function prunePreloadFavorites(existingNames) {
+  const existing = new Set(existingNames);
+  const favorites = loadPreloadFavorites();
+  const next = favorites.filter(name => existing.has(name));
+  if (next.length !== favorites.length) savePreloadFavorites(next);
+  else updatePreloadFavoriteSummary(next.length);
+  return next;
+}
+
+function updatePreloadFavoriteSummary(count = loadPreloadFavorites().length) {
+  const el = byId("libraryPreloadCount");
+  if (el) el.textContent = count + " preload";
+}
+
 async function ensureGameMetadata(name) {
   const meta = await readGameMetadata(name);
   if (meta.updated) return meta;
@@ -989,6 +1062,7 @@ async function refreshLibrary() {
   try {
     const games = await opfsWalk(OPFS_GAMES_DIR, "", false);
     games.sort((a, b) => a.path.localeCompare(b.path));
+    const preloadFavorites = new Set(prunePreloadFavorites(games.map(game => game.path)));
     if (count) count.textContent = games.length + " game" + (games.length === 1 ? "" : "s");
 
     if (!games.length) {
@@ -1004,6 +1078,7 @@ async function refreshLibrary() {
       const title = meta.title || prettyGameName(game.path);
       const format = meta.format || (game.path.split(".").pop() || "").toUpperCase();
       const mounted = !!window.FS?.analyzePath?.(VIRTUAL_GAME_DIR + "/" + game.path).exists;
+      const preloads = preloadFavorites.has(game.path);
       const primary = started ? (mounted ? "Ready" : "Mount") : "Play";
       const primaryDisabled = started && mounted ? " disabled" : "";
       const fallback = title.split(/\s+/).slice(0, 4).join(" ");
@@ -1016,9 +1091,10 @@ async function refreshLibrary() {
           </div>
           <div class="game-card-body">
             <div class="game-card-title" title="${esc(title)}">${esc(title)}</div>
-            <div class="game-card-meta" title="${esc(game.path)}">${esc(format)} · ${formatBytes(game.size || 0)}</div>
+            <div class="game-card-meta" title="${esc(game.path)}">${esc(format)} · ${formatBytes(game.size || 0)}${preloads ? " · Preload" : ""}</div>
             <div class="game-card-actions">
               <button data-action="play" data-game="${esc(game.path)}"${primaryDisabled}>${primary}</button>
+              <button class="icon-only preload-toggle${preloads ? " active" : ""}" title="${preloads ? "Remove from startup preload" : "Preload on startup"}" aria-pressed="${preloads ? "true" : "false"}" data-action="favorite" data-game="${esc(game.path)}">${svgIcon("star")}</button>
               <button class="icon-only" title="Info" data-action="info" data-game="${esc(game.path)}">${svgIcon("info")}</button>
               <button class="icon-only drive-sync-btn" title="Upload game file to Drive" data-action="drive-upload" data-game="${esc(game.path)}">${svgIcon("cloud-upload")}</button>
               <button class="icon-only danger" title="Delete" data-action="delete" data-game="${esc(game.path)}">${svgIcon("trash")}</button>
@@ -4063,15 +4139,37 @@ async function preloadAssets(FS) {
 }
 
 async function preloadStoredGames(FS) {
-  const games = await opfsWalk(OPFS_GAMES_DIR);
+  const games = await opfsWalk(OPFS_GAMES_DIR, "", false);
   if (!games.length) {
     log("OPFS games: no stored game files.", "dim");
     return 0;
   }
 
   FS.mkdirTree(VIRTUAL_GAME_DIR);
-  log("OPFS games: " + games.length + " stored file(s) available. They will mount on demand.", "ok");
-  return games.length;
+  const favorites = prunePreloadFavorites(games.map(game => game.path)).filter(name => name !== selectedStoredGame);
+  if (!favorites.length) {
+    log("OPFS games: " + games.length + " stored file(s) available. No startup preload favorites selected.", "ok");
+    return 0;
+  }
+
+  let ok = 0;
+  let bytesMounted = 0;
+  for (const name of favorites) {
+    const target = VIRTUAL_GAME_DIR + "/" + name;
+    try {
+      setStatus("Preloading favorite " + (ok + 1) + "/" + favorites.length + ": " + name, "run");
+      showLoading("Preloading favorite: " + name);
+      const data = await opfsReadGame(name);
+      FS.writeFile(target, data);
+      ok++;
+      bytesMounted += data.byteLength || 0;
+      log("Startup preload mounted: " + target + " (" + formatBytes(data.byteLength || 0) + ")", "ok");
+    } catch(e) {
+      log("Startup preload failed " + name + ": " + e.message, "warn");
+    }
+  }
+  log("OPFS games: preloaded " + ok + "/" + favorites.length + " favorite file(s) into " + VIRTUAL_GAME_DIR + " (" + formatBytes(bytesMounted) + ").", "ok");
+  return ok;
 }
 
 async function preloadGame(FS) {
@@ -4369,6 +4467,7 @@ on("libraryGrid", "click", e => {
   const name = button.dataset.game;
   if (!name) return;
   if (button.dataset.action === "play") playOrMountStoredGame(name);
+  else if (button.dataset.action === "favorite") togglePreloadFavorite(name);
   else if (button.dataset.action === "info") showGameInfo(name);
   else if (button.dataset.action === "drive-upload") runDriveAction("upload-game", () => uploadSingleGameToDrive(name));
   else if (button.dataset.action === "delete") deleteStoredFile(VIRTUAL_GAME_DIR + "/" + name);

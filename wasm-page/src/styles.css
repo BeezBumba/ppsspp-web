@@ -1230,7 +1230,11 @@ button.danger:hover { background: rgba(255,95,95,.1); border-color: var(--danger
 #libraryUrlInput:focus { border-color: var(--accent); box-shadow: var(--glow); }
 #libraryUrlInput::placeholder { color: var(--muted); }
 .library-count {
-  margin-left: auto; color: var(--muted); font-size: 10.5px;
+  margin-left: 0; color: var(--muted); font-size: 10.5px;
+  white-space: nowrap;
+}
+.library-preload-count {
+  margin-left: auto; color: var(--warn); font-size: 10.5px;
   white-space: nowrap;
 }
 #libraryEmpty {
@@ -1294,6 +1298,16 @@ button.danger:hover { background: rgba(255,95,95,.1); border-color: var(--danger
   display: inline-flex; align-items: center; justify-content: center;
 }
 .game-card-actions button.icon-only .lucide { width: 13px; height: 13px; }
+.game-card-actions button.preload-toggle.active,
+#gameInfoFavoriteBtn.active {
+  color: var(--warn);
+  border-color: rgba(245,166,35,.45);
+  background: rgba(245,166,35,.10);
+}
+.game-card-actions button.preload-toggle.active .lucide,
+#gameInfoFavoriteBtn.active .lucide {
+  fill: currentColor;
+}
 #gameInfoModal {
   position: fixed; inset: 0; z-index: 9998;
   display: none; align-items: center; justify-content: center;

@@ -132,6 +132,7 @@
             </label>
             <input id="libraryUrlInput" type="url" placeholder="https://.../game.iso|cso|chd" autocomplete="off" spellcheck="false">
             <button id="libraryDownloadUrlBtn"><i data-lucide="download"></i> Download</button>
+            <span class="library-preload-count" id="libraryPreloadCount">0 preload</span>
             <span class="library-count" id="libraryCount">0 games</span>
           </div>
           <div id="libraryEmpty">No games in OPFS yet.<br>Add a game file or launch one once.</div>
@@ -367,6 +368,7 @@
       </div>
       <div class="game-info-actions">
         <button id="gameInfoPlayBtn" class="primary"><i data-lucide="play"></i> Play</button>
+        <button id="gameInfoFavoriteBtn"><i data-lucide="star"></i> Preload</button>
         <button id="gameInfoCloseBtn"><i data-lucide="x"></i> Close</button>
       </div>
     </div>
