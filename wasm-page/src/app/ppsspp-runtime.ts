@@ -9,6 +9,7 @@ import {
   FolderOpen,
   FolderPlus,
   Gamepad2,
+  GitFork,
   HardDrive,
   Info,
   Link2,
@@ -37,6 +38,7 @@ const PPSSPP_ICONS = {
   FolderOpen,
   FolderPlus,
   Gamepad2,
+  GitFork,
   HardDrive,
   Info,
   Link2,
@@ -54,7 +56,7 @@ const PPSSPP_ICONS = {
   Upload,
   X,
 };
-const RUNTIME_ASSET_VERSION = '2026-06-03-fast-memory-default';
+const RUNTIME_ASSET_VERSION = '2026-06-03-preload-hard-drive-icon';
 
 @Injectable({ providedIn: 'root' })
 export class PpssppRuntime {

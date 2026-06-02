@@ -89,25 +89,26 @@ button.icon-btn .lucide { width: 15px; height: 15px; }
 .badge .lucide { width: 12px; height: 12px; stroke-width: 2; }
 /* ── Buttons ─────────────────────────────────────────── */
 
-button, label.btn, select.btn {
+button, label.btn, a.btn, select.btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 5px;
   border: 1px solid var(--border2); background: var(--surface2);
   color: var(--text); border-radius: var(--radius-sm);
   padding: 0 11px; height: 32px; min-width: 32px;
   font: inherit; font-size: 12.5px; line-height: 1;
+  text-decoration: none;
   cursor: pointer; white-space: nowrap; outline: none;
   transition: background .12s, border-color .12s, box-shadow .12s, opacity .12s;
   -webkit-user-select: none; user-select: none;
   touch-action: manipulation;
 }
-button:hover, label.btn:hover { background: var(--surface3); border-color: var(--border2); }
-button:active, label.btn:active { transform: scale(.97); }
-button:focus-visible, select.btn:focus-visible { box-shadow: var(--glow); border-color: var(--accent); }
-button.primary, label.btn.primary {
+button:hover, label.btn:hover, a.btn:hover { background: var(--surface3); border-color: var(--border2); }
+button:active, label.btn:active, a.btn:active { transform: scale(.97); }
+button:focus-visible, label.btn:focus-visible, a.btn:focus-visible, select.btn:focus-visible { box-shadow: var(--glow); border-color: var(--accent); }
+button.primary, label.btn.primary, a.btn.primary {
   background: var(--accent); color: #051410;
   border-color: var(--accent2); font-weight: 700; font-size: 13px; padding: 0 16px;
 }
-button.primary:hover, label.btn.primary:hover { background: var(--accent2); border-color: var(--accent2); }
+button.primary:hover, label.btn.primary:hover, a.btn.primary:hover { background: var(--accent2); border-color: var(--accent2); }
 button.secondary {
   background: rgba(255,255,255,.05); border-color: rgba(255,255,255,.13);
   color: var(--text);
@@ -137,7 +138,7 @@ body.panel-open button.panel-btn { color: var(--accent); border-color: rgba(0,21
   border-color: rgba(0,212,170,.34);
 }
 .top-official-link .lucide { width: 13px; height: 13px; }
-button:disabled, label.btn.disabled, select.btn:disabled { opacity: .35; cursor: not-allowed; pointer-events: none; }
+button:disabled, label.btn.disabled, a.btn.disabled, select.btn:disabled { opacity: .35; cursor: not-allowed; pointer-events: none; }
 input[type="file"] { display: none; }
 select.btn {
   appearance: none; -webkit-appearance: none; padding: 0 26px 0 11px;
@@ -301,11 +302,24 @@ body.emulator-started #idleOverlay {
   max-width: 34em;
 }
 .idle-actions {
-  display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px;
+  display: grid; grid-template-columns: repeat(2, minmax(132px, 1fr));
+  gap: 10px; margin-top: 22px; width: min(100%, 330px);
   pointer-events: auto;
 }
 .idle-actions .btn, .idle-actions button { height: 40px; border-radius: 10px; font-size: 13px; font-weight: 600; }
 .idle-actions .btn { font-weight: 700; }
+#idleStartBtn {
+  grid-column: 1 / -1;
+}
+.idle-repo-link {
+  background: rgba(255,255,255,.05);
+  border-color: rgba(255,255,255,.14);
+  color: var(--text);
+}
+.idle-repo-link:hover {
+  background: rgba(255,255,255,.09);
+  border-color: rgba(255,255,255,.24);
+}
 .idle-powered {
   position: absolute; right: clamp(12px, 2.4vw, 22px); bottom: clamp(10px, 2vw, 18px);
   z-index: 2; pointer-events: auto;
@@ -614,7 +628,7 @@ body.panel-open aside { display: grid; }
   .hbar-sep { display: none; }
   .btn-lbl { display: none; }
   .badge { display: none; }
-  button, label.btn, select.btn {
+  button, label.btn, a.btn, select.btn {
     height: 40px;
     min-width: 40px;
     padding: 0 10px;
@@ -622,7 +636,7 @@ body.panel-open aside { display: grid; }
     font-size: 13px;
   }
   button.icon-btn { width: 40px; font-size: 17px; }
-  button.primary, label.btn.primary { padding: 0 13px; }
+  button.primary, label.btn.primary, a.btn.primary { padding: 0 13px; }
   .logo {
     grid-column: 1;
     min-width: 38px;
@@ -729,16 +743,14 @@ body.panel-open aside { display: grid; }
   .idle-psp { width: min(72vw, 270px); order: -1; }
 
   .idle-actions {
-    flex-direction: row;
-    flex-wrap: wrap;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
     margin-top: 16px;
-    width: auto;
+    width: min(100%, 304px);
     max-width: 100%;
   }
   .idle-actions .btn,
   .idle-actions button {
-    flex: 0 1 auto;
     width: auto;
     min-width: 132px;
     height: 38px;
@@ -751,7 +763,8 @@ body.panel-open aside { display: grid; }
     padding: 0 13px;
   }
   .idle-actions .btn.primary,
-  .idle-actions label.btn.primary {
+  .idle-actions label.btn.primary,
+  .idle-actions a.btn.primary {
     background: var(--accent);
     color: #051410;
     border-color: var(--accent2);
@@ -759,14 +772,17 @@ body.panel-open aside { display: grid; }
     font-size: 12.5px;
   }
   .idle-actions .btn.primary:active,
-  .idle-actions label.btn.primary:active { transform: scale(.97); }
-  .idle-actions button:not(.primary) {
+  .idle-actions label.btn.primary:active,
+  .idle-actions a.btn.primary:active { transform: scale(.97); }
+  .idle-actions button:not(.primary),
+  .idle-actions a.btn:not(.primary) {
     background: rgba(255,255,255,.05);
     border: 1px solid rgba(255,255,255,.12);
     color: var(--text);
     backdrop-filter: blur(8px);
   }
-  .idle-actions button:not(.primary):active { transform: scale(.97); }
+  .idle-actions button:not(.primary):active,
+  .idle-actions a.btn:not(.primary):active { transform: scale(.97); }
   .idle-actions .lucide { width: 17px; height: 17px; }
   @media (max-width: 380px) {
     .idle-actions {
@@ -774,7 +790,6 @@ body.panel-open aside { display: grid; }
     }
     .idle-actions .btn,
     .idle-actions button {
-      flex: 1 1 0;
       min-width: 0;
       padding: 0 9px;
       font-size: 12px;
@@ -941,7 +956,7 @@ body.panel-open aside { display: grid; }
     padding-top: 3px;
     padding-bottom: 3px;
   }
-  button, label.btn, select.btn,
+  button, label.btn, a.btn, select.btn,
   button.icon-btn {
     height: 36px;
     min-width: 36px;
@@ -1030,7 +1045,7 @@ body.panel-open aside { display: grid; }
   }
 }
 @media (max-width: 400px) {
-  button, label.btn { padding: 0 8px; }
+  button, label.btn, a.btn { padding: 0 8px; }
   .logo span { font-size: 12px; }
   .library-grid { grid-template-columns: 1fr; }
   .idle-title { font-size: 30px; }
@@ -1322,7 +1337,7 @@ button.danger:hover { background: rgba(255,95,95,.1); border-color: var(--danger
 }
 .game-card-actions button.preload-toggle.active .lucide,
 #gameInfoFavoriteBtn.active .lucide {
-  fill: currentColor;
+  fill: none;
 }
 #gameInfoModal {
   position: fixed; inset: 0; z-index: 9998;

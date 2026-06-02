@@ -63,8 +63,11 @@
             <h1 class="idle-title">Your PSP is waiting.</h1>
             <p class="idle-subtitle" id="idleSubtitle">Open a PSP game file or pick one from the library to start PPSSPP in the browser.</p>
             <div class="idle-actions">
-              <label class="btn" for="gameFile"><i data-lucide="folder-open"></i><span> Open Game</span></label>
               <button id="idleStartBtn" class="primary" type="button"><i data-lucide="play"></i><span> Start PPSSPP</span></button>
+              <label class="btn" for="gameFile"><i data-lucide="folder-open"></i><span> Open Game</span></label>
+              <a class="btn idle-repo-link" href="https://github.com/root-hunter/ppsspp-web" target="_blank" rel="noopener" title="Open PPSSPP Web repository">
+                <i data-lucide="git-fork"></i><span> GitHub Repo</span>
+              </a>
             </div>
           </div>
           <div class="idle-psp" aria-hidden="true">
@@ -368,7 +371,7 @@
       </div>
       <div class="game-info-actions">
         <button id="gameInfoPlayBtn" class="primary"><i data-lucide="play"></i> Play</button>
-        <button id="gameInfoFavoriteBtn"><i data-lucide="star"></i> Preload</button>
+        <button id="gameInfoFavoriteBtn"><i data-lucide="hard-drive"></i> Preload</button>
         <button id="gameInfoCloseBtn"><i data-lucide="x"></i> Close</button>
       </div>
     </div>
