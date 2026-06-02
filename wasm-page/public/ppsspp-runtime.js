@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2026 Antonio Ricciardi
+ * SPDX-License-Identifier: GPL-2.0-only
+ */
+
 /* ── Constants ──────────────────────────────────────────────────── */
 let BUILD_DIR          = "build-wasm/";
 const BUILD_STAMP      = String(Date.now());
