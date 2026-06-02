@@ -110,6 +110,7 @@ const NETWORK_SERVER_KEY = "ppsspp_network_server";
 const NETWORK_NICK_KEY   = "ppsspp_network_nick";
 const NETWORK_MAC_KEY    = "ppsspp_network_mac";
 const PRELOAD_FAVORITES_KEY = "ppsspp_preload_favorites";
+const PRELOAD_FAVORITES_MIGRATED_KEY = "ppsspp_preload_favorites_migrated_v1";
 const ADHOC_WS_PORT      = 27312;
 
 let stableViewportWidth = 0;
@@ -426,6 +427,8 @@ async function opfsClearAll() {
   try { await root.removeEntry(OPFS_PERSIST_DIR, { recursive: true }); } catch(e) {}
   try { await root.removeEntry(OPFS_GAMES_DIR, { recursive: true }); } catch(e) {}
   try { await root.removeEntry(OPFS_GAME_META_DIR, { recursive: true }); } catch(e) {}
+  localStorage.removeItem(PRELOAD_FAVORITES_KEY);
+  localStorage.removeItem(PRELOAD_FAVORITES_MIGRATED_KEY);
   await root.getDirectoryHandle(OPFS_PERSIST_DIR, { create: true });
   await root.getDirectoryHandle(OPFS_GAMES_DIR, { create: true });
   await root.getDirectoryHandle(OPFS_GAME_META_DIR, { create: true });
@@ -1014,9 +1017,24 @@ function setPreloadFavorite(name, enabled) {
   return savePreloadFavorites(next);
 }
 
+function ensurePreloadFavoritesMigrated(existingNames) {
+  const existing = [...new Set(existingNames.filter(name => typeof name === "string" && name))];
+  if (localStorage.getItem(PRELOAD_FAVORITES_MIGRATED_KEY) === "1") return loadPreloadFavorites();
+
+  localStorage.setItem(PRELOAD_FAVORITES_MIGRATED_KEY, "1");
+  if (localStorage.getItem(PRELOAD_FAVORITES_KEY) !== null) return loadPreloadFavorites();
+  if (!existing.length) {
+    updatePreloadFavoriteSummary(0);
+    return [];
+  }
+
+  log("Startup preload: migrated " + existing.length + " existing library game" + (existing.length === 1 ? "" : "s") + " to preload favorites.", "ok");
+  return savePreloadFavorites(existing);
+}
+
 function prunePreloadFavorites(existingNames) {
   const existing = new Set(existingNames);
-  const favorites = loadPreloadFavorites();
+  const favorites = ensurePreloadFavoritesMigrated(existingNames);
   const next = favorites.filter(name => existing.has(name));
   if (next.length !== favorites.length) savePreloadFavorites(next);
   else updatePreloadFavoriteSummary(next.length);
