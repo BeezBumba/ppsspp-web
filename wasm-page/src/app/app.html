@@ -49,22 +49,7 @@
   <div class="body-main">
     <section class="stage">
       <canvas id="canvas" width="1280" height="720" tabindex="0"></canvas>
-      <div id="idleOverlay">
-        <div class="idle-content">
-          <div class="idle-copy">
-            <div class="idle-actions">
-              <button id="idleStartBtn" class="primary" type="button"><i data-lucide="play"></i><span> Start PPSSPP</span></button>
-              <label class="btn" for="gameFile"><i data-lucide="folder-open"></i><span> Open Game</span></label>
-            </div>
-          </div>
-          <div class="idle-psp" aria-hidden="true">
-            <div class="idle-psp-screen"></div>
-            <div class="idle-psp-dpad"></div>
-            <div class="idle-psp-buttons"></div>
-            <div class="idle-psp-stick"></div>
-          </div>
-        </div>
-      </div>
+      <div id="idleOverlay" style="display:none"></div>
       <div id="loadOverlay">
         <div class="spinner"></div>
         <div class="load-label" id="loadLabel">Initializing&hellip;</div>
