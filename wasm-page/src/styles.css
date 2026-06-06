@@ -177,7 +177,8 @@ select.btn option { background: var(--surface2); }
   display: grid; grid-template-columns: 1fr;
   overflow: hidden;
 }
-body.panel-open .body-main { grid-template-columns: minmax(0,1fr) var(--panel-w); }
+/* PATCHED: panel is now a fixed overlay — canvas never gets pushed */
+body.panel-open .body-main { grid-template-columns: 1fr !important; }
 
 /* ── Stage (canvas area) ─────────────────────────────── */
 .stage {
@@ -434,8 +435,9 @@ body.emulator-started #idleOverlay {
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
 
 /* ── Side panel ──────────────────────────────────────── */
+/* PATCHED: aside is now a fixed overlay drawer; display/visibility handled by the patch block below */
 aside {
-  display: none; /* hidden by default */
+  display: none;
   grid-template-rows: auto auto 1fr;
   border-left: 1px solid var(--border); background: var(--surface);
   min-height: 0; overflow: hidden;
@@ -1699,34 +1701,43 @@ body.panel-open #panelOverlayBackdrop {
   opacity: 1;
 }
 
-/* ── 4. aside → fixed slide-in drawer from the right ── */
-aside,
-#sidePanel {
-  display: flex !important;
-  flex-direction: column;
-  position: fixed;
-  top: var(--h);
-  right: 0;
-  width: var(--panel-w);
-  height: calc(var(--app-h) - var(--h));
-  z-index: 201;
-  background: var(--surface);
-  border-left: 1px solid var(--border);
+/* ── 4. aside → fixed slide-in drawer from the right ──
+   Use visibility+transform instead of display:none so the original
+   display:none/grid rules don’t fight us. */
+aside {
+  display: flex !important;   /* override the original display:none */
+  flex-direction: column !important;
+  grid-template-rows: none !important;
+  position: fixed !important;
+  top: var(--h) !important;
+  right: 0 !important;
+  bottom: auto !important;
+  left: auto !important;
+  width: var(--panel-w) !important;
+  height: calc(var(--app-h) - var(--h)) !important;
+  z-index: 201 !important;
+  background: var(--surface) !important;
+  border-left: 1px solid var(--border) !important;
+  border-top: none !important;
+  border-radius: 0 !important;
   box-shadow: -8px 0 40px rgba(0, 0, 0, 0.70),
-              -1px 0 0 rgba(91, 200, 245, 0.06);
-  overflow: hidden;
-  transform: translateX(100%);
-  visibility: hidden;
+              -1px 0 0 rgba(91, 200, 245, 0.06) !important;
+  overflow: hidden !important;
+  transform: translateX(110%) !important;
+  visibility: hidden !important;
   transition: transform 0.24s cubic-bezier(0.4, 0, 0.2, 1),
-              visibility 0s linear 0.24s;
+              visibility 0s linear 0.24s !important;
+  padding-bottom: 0 !important;
+  backdrop-filter: none !important;
 }
-body.panel-open aside,
-body.panel-open #sidePanel {
-  transform: translateX(0);
-  visibility: visible;
+body.panel-open aside {
+  transform: translateX(0) !important;
+  visibility: visible !important;
   transition: transform 0.24s cubic-bezier(0.4, 0, 0.2, 1),
-              visibility 0s linear 0s;
+              visibility 0s linear 0s !important;
 }
+/* Remove the drag-handle pseudo-element on desktop */
+aside::before { display: none !important; }
 
 /* ── 5. Panel header row (title + close button) ── */
 .panel-header-row {
@@ -1788,36 +1799,34 @@ body.panel-open #sidePanel {
 @media (max-width: 700px), (pointer: coarse) and (max-height: 560px), (pointer: coarse) and (max-width: 920px) {
   body.panel-open .body-main { grid-template-columns: 1fr !important; }
 
-  aside,
-  #sidePanel {
-    top: auto;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    width: 100%;
-    height: min(calc(var(--app-h) * 0.72), calc(var(--app-h) - 72px));
-    max-height: calc(var(--app-h) - env(safe-area-inset-top) - 12px);
-    border-left: none;
-    border-top: 1px solid var(--border2);
-    border-radius: 12px 12px 0 0;
-    box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.75);
-    padding-bottom: env(safe-area-inset-bottom);
-    transform: translateY(100%);
-    visibility: hidden;
+  aside {
+    top: auto !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    height: min(calc(var(--app-h) * 0.72), calc(var(--app-h) - 72px)) !important;
+    max-height: calc(var(--app-h) - env(safe-area-inset-top) - 12px) !important;
+    border-left: none !important;
+    border-top: 1px solid var(--border2) !important;
+    border-radius: 12px 12px 0 0 !important;
+    box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.75) !important;
+    padding-bottom: env(safe-area-inset-bottom) !important;
+    transform: translateY(110%) !important;
+    visibility: hidden !important;
     transition: transform 0.24s cubic-bezier(0.4, 0, 0.2, 1),
-                visibility 0s linear 0.24s;
+                visibility 0s linear 0.24s !important;
   }
-  body.panel-open aside,
-  body.panel-open #sidePanel {
-    transform: translateY(0);
-    visibility: visible;
+  body.panel-open aside {
+    transform: translateY(0) !important;
+    visibility: visible !important;
     transition: transform 0.24s cubic-bezier(0.4, 0, 0.2, 1),
-                visibility 0s linear 0s;
+                visibility 0s linear 0s !important;
   }
-  aside::before,
-  #sidePanel::before {
-    content: '';
-    display: block;
+  /* drag handle on mobile */
+  aside::before {
+    content: '' !important;
+    display: block !important;
     width: 36px;
     height: 4px;
     background: var(--border2);
@@ -1829,24 +1838,21 @@ body.panel-open #sidePanel {
 
 /* ── 8. Landscape coarse-pointer: right-side drawer ── */
 @media (pointer: coarse) and (orientation: landscape) and (max-height: 560px) {
-  aside,
-  #sidePanel {
-    top: var(--h);
-    bottom: auto;
-    left: auto;
-    right: 0;
-    width: min(360px, 48vw);
-    height: calc(var(--app-h) - var(--h));
-    max-height: none;
-    border-radius: 0;
-    border-top: none;
-    border-left: 1px solid var(--border2);
-    transform: translateX(100%);
+  aside {
+    top: var(--h) !important;
+    bottom: auto !important;
+    left: auto !important;
+    right: 0 !important;
+    width: min(360px, 48vw) !important;
+    height: calc(var(--app-h) - var(--h)) !important;
+    max-height: none !important;
+    border-radius: 0 !important;
+    border-top: none !important;
+    border-left: 1px solid var(--border2) !important;
+    transform: translateX(110%) !important;
   }
-  body.panel-open aside,
-  body.panel-open #sidePanel {
-    transform: translateX(0);
+  body.panel-open aside {
+    transform: translateX(0) !important;
   }
-  aside::before,
-  #sidePanel::before { display: none; }
+  aside::before { display: none !important; }
 }
