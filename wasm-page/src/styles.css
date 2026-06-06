@@ -1765,33 +1765,8 @@ aside::before { display: none !important; }
   color: var(--accent);
 }
 
-/* ── 6. Idle screen: remove text, keep only the two action buttons centred ── */
-.idle-kicker,
-.idle-title,
-.idle-subtitle,
-.idle-powered {
-  display: none !important;
-}
-
-.idle-content {
-  grid-template-columns: 1fr !important;
-  justify-items: center;
-  width: min(400px, 100%) !important;
-}
-
-.idle-copy {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  max-width: 100%;
-}
-
-.idle-actions {
-  margin-top: 0 !important;
-  width: auto !important;
-}
-
-.idle-psp {
+/* ── 6. Idle overlay: fully hidden — canvas area is clean dark background ── */
+#idleOverlay {
   display: none !important;
 }
 
