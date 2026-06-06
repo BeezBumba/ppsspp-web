@@ -1,5 +1,4 @@
-
-  <header>
+<header>
     <span class="logo">
       <img class="logo-icon" src="icons/icon-192.png" alt="">
       <span>PPSSPP Web</span>
@@ -43,7 +42,7 @@
       <span id="driveBadge"   class="badge drive-badge" title="Google Drive — click to go to Drive tab" role="button" tabindex="0" style="display:none">
         <i data-lucide="cloud"></i> <span id="driveBadgeText">Drive</span>
       </span>
-      <button id="panelToggleBtn" class="panel-btn" title="Toggle console panel"><i data-lucide="panel-right"></i><span class="btn-lbl"> Panel</span></button>
+      <button id="panelToggleBtn" class="panel-btn" title="Toggle panel"><i data-lucide="settings"></i><span class="btn-lbl"> Settings</span></button>
     </div>
   </header>
 
@@ -53,15 +52,9 @@
       <div id="idleOverlay">
         <div class="idle-content">
           <div class="idle-copy">
-            <div class="idle-kicker">Ready to play</div>
-            <h1 class="idle-title">Your PSP is waiting.</h1>
-            <p class="idle-subtitle" id="idleSubtitle">Open a PSP game file or pick one from the library to start PPSSPP in the browser.</p>
             <div class="idle-actions">
               <button id="idleStartBtn" class="primary" type="button"><i data-lucide="play"></i><span> Start PPSSPP</span></button>
               <label class="btn" for="gameFile"><i data-lucide="folder-open"></i><span> Open Game</span></label>
-              <a class="btn idle-repo-link" href="https://github.com/root-hunter/ppsspp-web" target="_blank" rel="noopener" title="Open PPSSPP Web repository">
-                <i data-lucide="git-fork"></i><span> GitHub Repo</span>
-              </a>
             </div>
           </div>
           <div class="idle-psp" aria-hidden="true">
@@ -71,11 +64,6 @@
             <div class="idle-psp-stick"></div>
           </div>
         </div>
-        <a class="idle-powered" href="https://github.com/root-hunter" target="_blank" rel="noopener" title="Powered by root-hunter">
-          <span class="idle-powered-dot"></span>
-          <span>Powered by</span>
-          <strong>root-hunter</strong>
-        </a>
       </div>
       <div id="loadOverlay">
         <div class="spinner"></div>
@@ -89,7 +77,14 @@
       </div>
     </section>
 
-    <aside>
+    <!-- Slide-out panel overlay — does NOT push the canvas -->
+    <div id="panelOverlayBackdrop"></div>
+    <aside id="sidePanel">
+      <div class="panel-header-row">
+        <span class="panel-header-title"><i data-lucide="settings"></i> Settings &amp; Info</span>
+        <button id="panelCloseBtn" class="icon-btn" title="Close panel"><i data-lucide="x"></i></button>
+      </div>
+
       <div class="status-bar">
         <div class="status-dot" id="statusDot"></div>
         <span id="statusText">Ready. Open a game file or use Library.</span>
