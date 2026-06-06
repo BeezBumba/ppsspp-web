@@ -342,10 +342,20 @@ const netPortEl           = byId("iNetPort");
 
 // Panel toggle (hidden by default; restore from localStorage)
 const PANEL_KEY = "ppsspp_panel_open";
-if (localStorage.getItem(PANEL_KEY) === "1") document.body.classList.add("panel-open");
+/* panel always starts closed */
 on(panelToggleBtn, "click", () => {
   const open = document.body.classList.toggle("panel-open");
   localStorage.setItem(PANEL_KEY, open ? "1" : "0");
+});
+// Close button inside the panel header
+document.getElementById("panelCloseBtn")?.addEventListener("click", () => {
+  document.body.classList.remove("panel-open");
+  localStorage.setItem(PANEL_KEY, "0");
+});
+// Clicking the backdrop also closes the panel
+document.getElementById("panelOverlayBackdrop")?.addEventListener("click", () => {
+  document.body.classList.remove("panel-open");
+  localStorage.setItem(PANEL_KEY, "0");
 });
 
 updateNetworkConfigUI();
